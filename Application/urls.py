@@ -1,0 +1,33 @@
+from django.urls import path
+from .views import *
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+urlpatterns = [
+    path('register/',RegisterView.as_view()),
+    path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
+    path('resend-otp/', ResendOTPView.as_view(), name='resend-otp'),
+    
+    path('google-auth/', GoogleAuthView.as_view(), name='google-login'),
+    
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    
+    path('uploaded-images/',UploadedImagesView.as_view(),name='uploaded-images'),
+
+    path('section-images/',SectionImagesView.as_view(),name='section-images'),
+    
+    path('upload-image/',UploadedImagesView.as_view(),name='upload-image'),
+    
+    path('course/',CourseView.as_view(),name='course'),
+        
+    path('course-page-details/',CoursePageDetailsView.as_view(),name='course-page-details'),
+    
+    path('enroll-form/',EnrollFormView.as_view(),name='enroll'),
+    
+    path('profile/',ProfileView.as_view(),name='profile'),
+    
+    path('certificate/',CertificateView.as_view(),name='certificate'),
+    
+    path('contact/',ContactView.as_view(),name='contact'),
+    
+
+]
