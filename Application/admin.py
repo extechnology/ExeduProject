@@ -27,5 +27,6 @@ admin.site.register(CoursePageDetails)
 
 admin.site.register(EnrollForm)
 
-
 admin.site.register(Contact)
+
+admin.site.register(SectionImages)
