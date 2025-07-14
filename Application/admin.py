@@ -10,16 +10,12 @@ class CertificateStackedInline(admin.StackedInline):
 
 class ProfileAdmin(admin.ModelAdmin):
     inlines = [CertificateStackedInline]
-    
 
 admin.site.register(Profile, ProfileAdmin)
 
 admin.site.register(Certificate)
 
 admin.site.register(EmailOTP)
-
-
-admin.site.register(UploadedImages)
 
 admin.site.register(Course)
 
@@ -30,3 +26,5 @@ admin.site.register(EnrollForm)
 admin.site.register(Contact)
 
 admin.site.register(SectionImages)
+
+admin.site.register(CourseSinglePage)

@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 
+
 class EmailOTP(models.Model):
     email = models.EmailField(unique=True)
     otp = models.CharField(max_length=6)
@@ -22,8 +23,6 @@ class EmailOTP(models.Model):
         return f"Email: {self.email}, OTP: {self.otp}"
     
     
-    
-    
 
 class UploadedImages(models.Model):
     image = models.ImageField(upload_to='images2/')
@@ -32,20 +31,17 @@ class UploadedImages(models.Model):
         return self.image.name
     
     
-class Course(models.Model):
-    title = models.CharField(max_length=255)
-    sub_title = models.CharField(max_length=255, null=True, blank=True)
-    description = models.TextField()
-    image = models.ImageField(upload_to='images/', default=None)
+    
 
-    def __str__(self):
-        return self.title
+
 
 
 class SectionImages(models.Model):
     CHOICES = [
         ('hero', 'Hero'),
-        ('passion', 'Passion'),
+        ('leading_solution', 'Leading Solution'),
+        ('transform_passion', 'Transform Passion'),
+        ('discuss_together', 'Discuss Together'),
         ('thumbnail', 'Thumbnail'),
         ('about_us', 'About Us'),
         ('why_us', 'Why Us'),
@@ -60,14 +56,48 @@ class SectionImages(models.Model):
         return f"{self.section} - {self.image.name}"
     
     
+    
 class CoursePageDetails(models.Model):
-    title = models.CharField(max_length=255)
+    
+    COURSE_OPTIONS = [
+        ('ai_advanced_digital_marketing', 'AI Advanced Digital Marketing'),
+        ('graphic_design', 'Graphic Design'),
+        ('ui/ux_design', 'UI/UX Design'),
+        ('web_and_app_development', 'WEB & APP Development'),
+        ('video_editing', 'Video Editing'),
+        ('robotics', 'Robotics'),
+    ] 
+    
+    title = models.CharField(max_length=255 , choices=COURSE_OPTIONS)
     sub_title = models.CharField(max_length=255 , null=True)
     image = models.ImageField(upload_to='images/', default=None)
     
     def __str__(self):
         return self.title
     
+    
+class Course(models.Model):
+    title = models.CharField(max_length=255, choices=CoursePageDetails.COURSE_OPTIONS)
+    sub_title = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField()
+    image = models.ImageField(upload_to='images/', default=None)
+
+    def __str__(self):
+        return self.title
+    
+    
+class CourseSinglePage(models.Model):
+    title = models.ForeignKey(Course, on_delete=models.CASCADE, null=True)
+    description = models.TextField()
+    main_image = models.ImageField(upload_to='images/', default=None)
+    second_image = models.ImageField(upload_to='images/', default=None)
+    third_image = models.ImageField(upload_to='images/', default=None)
+    points = models.TextField()
+    keyPoints = models.TextField()
+    specialties = models.TextField()
+
+    def __str__(self):
+        return self.title.title
 
 class EnrollForm(models.Model):
     name = models.CharField(max_length=255)
@@ -78,6 +108,7 @@ class EnrollForm(models.Model):
 
     def __str__(self):
         return self.title if self.title else "Untitled Enrollment" 
+
 
 
 class Profile(models.Model):
@@ -97,10 +128,10 @@ class Profile(models.Model):
     experience = models.TextField(null=True, blank=True)
     interests = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
+    is_public = models.BooleanField(default=False) 
 
     def __str__(self):
         return f"{self.name or 'Unnamed'} - {self.email or 'No Email'}"
-
 
 
 class Certificate(models.Model):
@@ -110,6 +141,7 @@ class Certificate(models.Model):
 
     def __str__(self):
         return f"Certificate for {self.profile.phone_number}"
+    
     
     
 class Contact(models.Model):

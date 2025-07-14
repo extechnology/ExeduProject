@@ -144,7 +144,17 @@ EMAIL_USE_TLS =       config('EMAIL_USE_TLS')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  
+    "https://exedu.vercel.app",
+    "https://exedu-uiux.vercel.app/"
+    "https://exedu.in/"
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+GOOGLE_CLIENT_ID = "578165068399-ab6fe2havrar46ukmr4f8trunnuc4bd1.apps.googleusercontent.com"
+
 
 from datetime import timedelta
 
