@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{ profile.user.username }}'s Profile | ExEdu</title>
+
+    <!-- OG Tags -->
+    <meta property="og:title" content="{{ profile.user.username }}'s Profile on ExEdu" />
+    <meta property="og:description" content="Check out {{ profile.user.username }}'s achievements and skills on ExEdu." />
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ profile.profile_image.url }}" />
+    <meta property="og:url" content="{{ request.build_absolute_uri }}" />
+    <meta property="og:type" content="website" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ profile.user.username }}'s Profile on ExEdu" />
+    <meta name="twitter:description" content="Discover student profiles on ExEdu." />
+    <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ profile.profile_image.url }}" />
+
+    <meta http-equiv="refresh" content="0; url={{ request.scheme }}://{{ request.get_host }}/profile/public/{{ profile.unique_id }}" />
+  </head>
+  <body></body>
+</html>

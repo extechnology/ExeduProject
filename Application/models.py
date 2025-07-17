@@ -16,8 +16,9 @@ class EmailOTP(models.Model):
         super().save(*args, **kwargs)
     
     def is_valid(self):
-        expiration_time = timezone.now() - timezone.timedelta(minutes=10)
-        return self.created_at > expiration_time
+        expiration_time = self.created_at + timezone.timedelta(minutes=10)
+        return timezone.now() < expiration_time
+
     
     def __str__(self):
         return f"Email: {self.email}, OTP: {self.otp}"
@@ -30,11 +31,6 @@ class UploadedImages(models.Model):
     def __str__(self):
         return self.image.name
     
-    
-    
-
-
-
 
 class SectionImages(models.Model):
     CHOICES = [
@@ -129,6 +125,7 @@ class Profile(models.Model):
     interests = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
     is_public = models.BooleanField(default=False) 
+    can_access_profile = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.name or 'Unnamed'} - {self.email or 'No Email'}"

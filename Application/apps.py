@@ -7,3 +7,5 @@ class ApplicationConfig(AppConfig):
 
     def ready(self):
         from . import signals
+        
+    

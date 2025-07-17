@@ -149,12 +149,12 @@ class RegisterSerializer(serializers.Serializer):
         If you didn't request this code, you can safely ignore this email.
 
         © {datetime.datetime.now().year} YourCompany. All rights reserved.
-        Need help? Contact our support team at support@yourdomain.com
+        Need help? Contact our support team at exeduone@gmail.com
         """
         msg = EmailMultiAlternatives(
             subject,
             text_content,
-            'no-reply@yourdomain.com',
+            'no-reply@gmail.com',
             [email]
         )
         msg.attach_alternative(html_content, "text/html")
@@ -227,7 +227,7 @@ class ResendOTPSerializer(serializers.Serializer):
         except EmailOTP.DoesNotExist:
             raise serializers.ValidationError({"email": "No OTP found. Please request a new one."})
 
-        expiration_time = otp_record.created_at + timedelta(minutes=5)
+        expiration_time = otp_record.created_at + timedelta(minutes=10)
         if timezone.now() <= expiration_time:
             otp = otp_record.otp  
         else:
@@ -324,7 +324,7 @@ class ResendOTPSerializer(serializers.Serializer):
                 </p>
 
                 <div class="footer">
-                    <p>© {datetime.datetime.now().year} exedu. All rights reserved.</p>
+                    <p>© {datetime.datetime.now().year} exedu.in All rights reserved.</p>
                     <p>Need help? <a href="mailto:exeduone@gmail.com">Contact our support team</a></p>
                 </div>
             </div>
@@ -340,13 +340,13 @@ class ResendOTPSerializer(serializers.Serializer):
         As requested, here's your new One-Time Password (OTP) for verification:
         {otp}
 
-        This code expires in 1 minute.
+        This code expires in 10 minute.
 
         Note: For your security, please don't share this code with anyone.
         If you didn't request this code, you can safely ignore this email.
 
         © {datetime.datetime.now().year} YourCompany. All rights reserved.
-        Need help? Contact our support team at support@yourdomain.com
+        Need help? Contact our support team at exeduone@gmail.com
         """
 
         msg = EmailMultiAlternatives(
@@ -406,7 +406,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
             "unique_id", "profile_image", "name",
             "secondary_school", "secondary_year",
             "university", "university_major", "university_year",
-            "career_objective", "skills", "experience", "interests"
+            "career_objective", "skills", "experience", "interests","is_public"
         ]
 
 

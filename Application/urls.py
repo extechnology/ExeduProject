@@ -31,12 +31,21 @@ urlpatterns = [
     
     path('public-profile/<uuid:unique_id>/', PublicProfileView.as_view(), name='public-profile'),
     
+    path('auth/validate-token/', ValidateTokenView.as_view(), name='validate-token'),
+    
     path('profile/<int:pk>/', ProfileDetailView.as_view(), name='profile-detail'),
     
     path('profile/user/<int:user_id>/', ProfileByUserView.as_view(), name='profile-by-user'),
     
+    path("request-profile-access/", request_profile_access, name="request-profile-access"),
+    
     path('certificate/',CertificateView.as_view(),name='certificate'),
     
+    path("public-certificates/<uuid:unique_id>/", public_certificates),
+
+    path("profile/meta/<uuid:unique_id>/", profile_meta_preview, name="profile-meta"),
+    
+
     path('contact/',ContactView.as_view(),name='contact'),
 
 ]
