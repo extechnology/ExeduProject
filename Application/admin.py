@@ -15,8 +15,6 @@ class ProfileAdmin(admin.ModelAdmin):
     inlines = [CertificateStackedInline]
     
 
-
-
 admin.site.register(Profile, ProfileAdmin)
 
 admin.site.register(Certificate)

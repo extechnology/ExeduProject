@@ -153,8 +153,8 @@ ADMINS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  
     "https://exedu.vercel.app",
-    "https://exedu-uiux.vercel.app/"
-    "https://exedu.in/"
+    "https://exedu-uiux.vercel.app/",
+    "https://exedu.in/",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -169,6 +169,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
+
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=7),  # Customize as needed

@@ -16,15 +16,14 @@ def create_employee_profile(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Profile)
 def send_access_granted_email(sender, instance, created, **kwargs):
-    print("🚨 Profile post_save signal triggered")
     if created:
         return
 
     try:
         previous = Profile.objects.get(pk=instance.pk)
 
-        print("🧪 Previous access:", previous.can_access_profile)
-        print("🧪 Current access:", instance.can_access_profile)
+        print(" Previous access:", previous.can_access_profile)
+        print(" Current access:", instance.can_access_profile)
         if instance.can_access_profile:
 
             subject = "✅ Access Granted to Your Profile"
@@ -48,9 +47,8 @@ def send_access_granted_email(sender, instance, created, **kwargs):
             msg.attach_alternative(html_content, "text/html")
             msg.send()
 
-            print("✅ Email sent successfully to:", to_email)
 
     except Profile.DoesNotExist:
-        print("⚠️ Profile does not exist yet. Skipping email.")
+        print(" Profile does not exist yet. Skipping email.")
     except Exception as e:
-        print("❌ Error sending email:", str(e))
+        print(" Error sending email:", str(e))
