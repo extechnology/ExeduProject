@@ -542,4 +542,18 @@ class CertificateSerializer(serializers.ModelSerializer):
 class ContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
+<<<<<<< HEAD
+        fields = '__all__'
+
+class StudentCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentCourse
+        fields = '__all__'
+
+class StudentAttendanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentAttendance
+        fields = '__all__'
+=======
         fields = "__all__"
+>>>>>>> 733147b8419676abcf1282ffc7020f0d2b957cdf
