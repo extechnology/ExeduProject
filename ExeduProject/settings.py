@@ -152,7 +152,6 @@ ADMINS = [
     ("Vipin", "vipinrajk026@gmail.com"),
 ]
 
-<<<<<<< HEAD
 # CORS_ALLOWED_ORIGINS = [
 #     "http://localhost:5173",  
 #     "https://exedu.vercel.app",
@@ -160,15 +159,14 @@ ADMINS = [
 #     "https://exedu.in/",
 #     "https://server.exedu.in/"
 # ]
-=======
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  
     "https://exedu.vercel.app",
     "https://exedu-uiux.vercel.app/",
     "https://exedu.in/",
-]
->>>>>>> 733147b8419676abcf1282ffc7020f0d2b957cdf
-
+    "https://server.exedu.in/"
+    
 CORS_ALLOW_CREDENTIALS = True
 
 GOOGLE_CLIENT_ID = "578165068399-ab6fe2havrar46ukmr4f8trunnuc4bd1.apps.googleusercontent.com"
