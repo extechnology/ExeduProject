@@ -27,14 +27,24 @@ class CustomPagination(PageNumberPagination):
             'current_page': self.page.number,
             'page_size': self.page_size,
             'results': data
-        })
+        }) 
 
 
 class StudentDetailsView(APIView):
     pagination_class = CustomPagination
     permission_class = SuperUSerAndStaffOnly
     
-    def get(self, request, format=None):
-        student = Profile.objects.all()
-        serializer = StudentSerializer(student, many=True,context={'request': request})
-        return Response(serializer.data)
+    def get(self, request):
+        
+        name = request.query_params.get('name')
+        students = Profile.objects.all()
+        if name:
+            students = students.filter(Q(name__icontains=name) | Q(email__icontains=name))     
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(students, request)
+        if page is not None:
+            serializer = StudentSerializer(page, many=True, context={'request': request})
+            return paginator.get_paginated_response(serializer.data)
+        
+        serializer = StudentSerializer(page, many=True, context={'request': request})
+        return Response({'results': serializer.data})
