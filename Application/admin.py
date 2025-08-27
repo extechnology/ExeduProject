@@ -32,3 +32,7 @@ admin.site.register(Contact)
 admin.site.register(SectionImages)
 
 admin.site.register(CourseSinglePage)
+
+admin.site.register(StudentCourse)
+
+admin.site.register(StudentAttendance)
