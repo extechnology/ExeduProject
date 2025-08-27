@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'Application',
+    'Dashboard',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -150,12 +152,13 @@ ADMINS = [
     ("Vipin", "vipinrajk026@gmail.com"),
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  
-    "https://exedu.vercel.app",
-    "https://exedu-uiux.vercel.app/"
-    "https://exedu.in/"
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:5173",  
+#     "https://exedu.vercel.app",
+#     "https://exedu-uiux.vercel.app/",
+#     "https://exedu.in/",
+#     "https://server.exedu.in/"
+# ]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -170,6 +173,7 @@ REST_FRAMEWORK = {
     ),
 }
 
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=7),  # Customize as needed
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
@@ -182,8 +186,5 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
-
-
-
 
 
