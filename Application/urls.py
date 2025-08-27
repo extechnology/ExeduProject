@@ -45,7 +45,10 @@ urlpatterns = [
 
     path("profile/meta/<uuid:unique_id>/", profile_meta_preview, name="profile-meta"),
     
-
     path('contact/',ContactView.as_view(),name='contact'),
+    
+    path("password-reset/", PasswordResetView.as_view(), name="password-reset"),
+    
+    path("password-reset-confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
 
 ]
