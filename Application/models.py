@@ -23,7 +23,6 @@ class EmailOTP(models.Model):
     def __str__(self):
         return f"Email: {self.email}, OTP: {self.otp}"
     
-    
 
 class UploadedImages(models.Model):
     image = models.ImageField(upload_to='images2/')
@@ -104,7 +103,6 @@ class EnrollForm(models.Model):
 
     def __str__(self):
         return self.title if self.title else "Untitled Enrollment" 
-
 
 
 class Profile(models.Model):
