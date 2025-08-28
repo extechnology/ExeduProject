@@ -468,30 +468,25 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         self.user.save()
         return self.user
 
-
 class UploadedImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadedImages
         fields = "__all__"
-
 
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = "__all__"
 
-
 class SectionImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = SectionImages
         fields = "__all__"
 
-
 class CoursePageDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = CoursePageDetails
         fields = "__all__"
-
 
 class CourseSinglePageSerializer(serializers.ModelSerializer):
     title = serializers.StringRelatedField()
@@ -500,18 +495,15 @@ class CourseSinglePageSerializer(serializers.ModelSerializer):
         model = CourseSinglePage
         fields = "__all__"
 
-
 class EnrollFormSerializer(serializers.ModelSerializer):
     class Meta:
         model = EnrollForm
         fields = "__all__"
 
-
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = "__all__"
-
 
 class PublicProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -532,12 +524,10 @@ class PublicProfileSerializer(serializers.ModelSerializer):
             "is_public",
         ]
 
-
 class CertificateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Certificate
         fields = "__all__"
-
 
 class ContactSerializer(serializers.ModelSerializer):
     class Meta:
