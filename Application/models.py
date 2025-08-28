@@ -124,7 +124,13 @@ class Profile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
     is_public = models.BooleanField(default=False) 
     can_access_profile = models.BooleanField(default=False)
-
+    
+    course = models.CharField(max_length=255,null=True, blank=True)
+    enrolled_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
+    bach_number = models.CharField(max_length=255, null=True, blank=True)
+    payment_completed = models.BooleanField(default=False)
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    paid_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
     def __str__(self):
         return f"{self.name or 'Unnamed'} - {self.email or 'No Email'}"
 
@@ -169,26 +175,26 @@ class Batches(models.Model):
         return f"{self.tutor.name} - {self.course.title}"
 
 
-class StudentCourse(models.Model):
-    profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    enrolled_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
-    bach_number = models.CharField(max_length=255, null=True, blank=True)
-    payment_completed = models.BooleanField(default=False)
-    paid_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    paid_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
+# class StudentCourse(models.Model):
+#     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+#     course = models.ForeignKey(Course, on_delete=models.CASCADE)
+#     enrolled_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
+#     bach_number = models.CharField(max_length=255, null=True, blank=True)
+#     payment_completed = models.BooleanField(default=False)
+#     paid_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+#     paid_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
 
-    def __str__(self):
-        return f"{self.profile.name} - {self.course.title}"
+#     def __str__(self):
+#         return f"{self.profile.name} - {self.course.title}"
 
 
-class StudentAttendance(models.Model):
-    student_course = models.ForeignKey(StudentCourse, on_delete=models.CASCADE, related_name='attendances')
-    attended_at = models.DateTimeField(auto_now_add=False, null=True, blank=True,unique=True)
-    class_time = models.TimeField(auto_now_add=False, null=True, blank=True)
-    attended = models.BooleanField(default=False)
+# class StudentAttendance(models.Model):
+#     student_course = models.ForeignKey(StudentCourse, on_delete=models.CASCADE, related_name='attendances')
+#     attended_at = models.DateTimeField(auto_now_add=False, null=True, blank=True,unique=True)
+#     class_time = models.TimeField(auto_now_add=False, null=True, blank=True)
+#     attended = models.BooleanField(default=False)
 
-    def __str__(self):
-        return f"{self.student_course.profile.name} - {self.student_course.course.title}"
+#     def __str__(self):
+#         return f"{self.student_course.profile.name} - {self.student_course.course.title}"
     
 

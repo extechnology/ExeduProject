@@ -544,12 +544,12 @@ class ContactSerializer(serializers.ModelSerializer):
         model = Contact
         fields = '__all__'
 
-class StudentCourseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StudentCourse
-        fields = '__all__'
+# class StudentCourseSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = StudentCourse
+#         fields = '__all__'
 
-class StudentAttendanceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StudentAttendance
-        fields = '__all__'
+# class StudentAttendanceSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = StudentAttendance
+#         fields = '__all__'
