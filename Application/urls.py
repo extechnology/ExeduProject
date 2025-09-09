@@ -30,6 +30,8 @@ urlpatterns = [
     path('upload-image/',UploadedImagesView.as_view(),name='upload-image'),
     
     path('course/',CourseView.as_view(),name='course'),
+    
+    path('course-options/', CourseOptionsView.as_view(), name='course-options'),
         
     path('course-page-details/',CoursePageDetailsView.as_view(),name='course-page-details'),
     

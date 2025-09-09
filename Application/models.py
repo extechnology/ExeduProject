@@ -193,7 +193,7 @@ class StudentAttendance(models.Model):
     marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="marked_attendance")
 
     class Meta:
-        unique_together = ("student", "student_course", "date")  
+        unique_together = ("student", "student_course", "date") 
 
     def __str__(self):
         return f"{self.student} - {self.student_course} - {self.date} ({self.status})"

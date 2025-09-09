@@ -134,11 +134,30 @@ class CourseView(APIView):
         serializer = CourseSerializer(courses, many=True)
         return Response(serializer.data)
     
+    def post(self, request, format=None):
+        serializer = CourseSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+    
+class CourseOptionsView(APIView):
+    def get(self, request, format=None):
+        options = [
+            {"value": key, "label": label}
+            for key, label in CoursePageDetails.COURSE_OPTIONS
+        ]
+        return Response(options)
+
+    
 class CoursePageDetailsView(APIView):
     def get(self, request, format=None):
         course_details = CoursePageDetails.objects.all()
         serializer = CoursePageDetailsSerializer(course_details, many=True)
         return Response(serializer.data)
+
+    
+
     
 class CourseSinglePageView(APIView):
     def get(self, request, format=None):
