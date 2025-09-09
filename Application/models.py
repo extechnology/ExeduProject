@@ -125,12 +125,13 @@ class Profile(models.Model):
     is_public = models.BooleanField(default=False) 
     can_access_profile = models.BooleanField(default=False)
     
-    course = models.CharField(max_length=255,null=True, blank=True)
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True)
     enrolled_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
     bach_number = models.CharField(max_length=255, null=True, blank=True)
     payment_completed = models.BooleanField(default=False)
     paid_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     paid_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
+    
     def __str__(self):
         return f"{self.name or 'Unnamed'} - {self.email or 'No Email'}"
 
@@ -175,26 +176,28 @@ class Batches(models.Model):
         return f"{self.tutor.name} - {self.course.title}"
 
 
-# class StudentCourse(models.Model):
-#     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
-#     course = models.ForeignKey(Course, on_delete=models.CASCADE)
-#     enrolled_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
-#     bach_number = models.CharField(max_length=255, null=True, blank=True)
-#     payment_completed = models.BooleanField(default=False)
-#     paid_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-#     paid_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
 
-#     def __str__(self):
-#         return f"{self.profile.name} - {self.course.title}"
+class StudentAttendance(models.Model):
+    
+    STATUS_CHOICES = [
+        ("present", "Present"),
+        ("absent", "Absent"),
+        ("late", "Late"),
+    ]
+
+    student = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="attendance_records")
+    student_course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='attendances')
+    date = models.DateField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    attended_at = models.TimeField(auto_now_add=False, null=True, blank=True)
+    marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="marked_attendance")
+
+    class Meta:
+        unique_together = ("student", "student_course", "date")  
+
+    def __str__(self):
+        return f"{self.student} - {self.student_course} - {self.date} ({self.status})"
 
 
-# class StudentAttendance(models.Model):
-#     student_course = models.ForeignKey(StudentCourse, on_delete=models.CASCADE, related_name='attendances')
-#     attended_at = models.DateTimeField(auto_now_add=False, null=True, blank=True,unique=True)
-#     class_time = models.TimeField(auto_now_add=False, null=True, blank=True)
-#     attended = models.BooleanField(default=False)
-
-#     def __str__(self):
-#         return f"{self.student_course.profile.name} - {self.student_course.course.title}"
     
 

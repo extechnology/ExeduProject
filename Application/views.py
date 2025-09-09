@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets,permissions
 from .models import *
 from .serializers import *
 from rest_framework.response import Response
@@ -21,7 +21,8 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import HttpResponse
-
+from rest_framework.decorators import action
+from django.db import transaction
 
 class GoogleAuthView(APIView):
     def post(self, request):
@@ -159,6 +160,12 @@ class EnrollFormView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
+class StudentProfileViewset(viewsets.ModelViewSet):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializer
+    permission_classes = [IsAuthenticated]
 
 class ProfileListView(APIView):
     def get(self, request, format=None):
@@ -306,7 +313,7 @@ class CertificateView(APIView):
             return Response({'error': 'Profile not found.'}, status=404)
     
         data = request.data.copy()
-        data['profile'] = profile.pk  # ✅ or profile.unique_id
+        data['profile'] = profile.pk 
         serializer = CertificateSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -334,3 +341,96 @@ class ContactView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+
+
+class AttendanceViewSet(viewsets.ModelViewSet):
+    queryset = StudentAttendance.objects.all().select_related("student", "student_course")
+    serializer_class = AttendanceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        data = serializer.validated_data
+        obj, _ = StudentAttendance.objects.update_or_create(
+            student=data["student"],
+            student_course=data["student_course"],
+            date=data["date"],
+            defaults={
+                "status": data["status"],
+                "marked_by": self.request.user,
+                "attended_at": data.get("attended_at"),
+            },
+        )
+        return obj
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        date = self.request.query_params.get("date")
+        course_id = self.request.query_params.get("course")
+        student_id = self.request.query_params.get("student")
+
+        if date:
+            queryset = queryset.filter(date=date)
+        if course_id:
+            queryset = queryset.filter(student_course_id=course_id)
+        if student_id:
+            queryset = queryset.filter(student_id=student_id)
+
+        return queryset
+
+    @action(detail=False, methods=["post"])
+    def bulk(self, request):
+        date = request.data.get("date")
+        course_id = request.data.get("course")
+        records = request.data.get("records", [])
+
+        if not date or not course_id or not records:
+            return Response(
+                {"error": "date, course, and records are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        course = get_object_or_404(Course, id=course_id)
+
+        created, errors = [], []
+
+        with transaction.atomic():
+            for idx, record in enumerate(records):
+                student_uuid = record.get("student")
+                status_val = record.get("status")
+                attended_at = record.get("attended_at")
+
+                if not student_uuid or not status_val:
+                    errors.append({"index": idx, "error": "missing student or status"})
+                    continue
+
+                try:
+                    student_obj = Profile.objects.get(unique_id=student_uuid)
+                except Profile.DoesNotExist:
+                    errors.append({"index": idx, "error": f"student not found: {student_uuid}"})
+                    continue
+
+                obj, _ = StudentAttendance.objects.update_or_create(
+                    student=student_obj,
+                    student_course=course,
+                    date=date,
+                    defaults={
+                        "status": status_val,
+                        "marked_by": request.user,
+                        "attended_at": attended_at,
+                    },
+                )
+                created.append(obj)
+
+        serializer = self.get_serializer(created, many=True)
+        return Response(
+            {
+                "saved_count": len(created),
+                "errors": errors,
+                "records": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+

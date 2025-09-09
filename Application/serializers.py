@@ -501,9 +501,13 @@ class EnrollFormSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class ProfileSerializer(serializers.ModelSerializer):
+    course = serializers.StringRelatedField()
+
+
     class Meta:
         model = Profile
         fields = "__all__"
+
 
 class PublicProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -529,17 +533,36 @@ class CertificateSerializer(serializers.ModelSerializer):
         model = Certificate
         fields = "__all__"
 
+
 class ContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
         fields = '__all__'
 
-# class StudentCourseSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = StudentCourse
-#         fields = '__all__'
 
-# class StudentAttendanceSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = StudentAttendance
-#         fields = '__all__'
+class AttendanceSerializer(serializers.ModelSerializer):
+    student = serializers.SlugRelatedField(
+        slug_field="unique_id",
+        queryset=Profile.objects.all()
+    )
+    student_name = serializers.CharField(source="student.name", read_only=True)
+    course_name = serializers.CharField(source="student_course.course.title", read_only=True)
+
+    class Meta:
+        model = StudentAttendance
+        fields = [
+            "id",
+            "student",
+            "student_name",
+            "student_course",
+            "course_name",
+            "date",
+            "status",
+            "attended_at",
+            "marked_by",
+        ]
+        read_only_fields = ["marked_by"]
+
+
+
+

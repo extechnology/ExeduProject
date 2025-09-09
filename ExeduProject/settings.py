@@ -152,13 +152,14 @@ ADMINS = [
     ("Vipin", "vipinrajk026@gmail.com"),
 ]
 
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",  
-#     "https://exedu.vercel.app",
-#     "https://exedu-uiux.vercel.app/",
-#     "https://exedu.in/",
-#     "https://server.exedu.in/"
-# ]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  
+    "https://exedu.vercel.app",
+    "https://exedu-uiux.vercel.app",
+    "https://exedu.in",
+    "https://server.exedu.in",
+    "http://localhost:8080",
+]
 
 CORS_ALLOW_CREDENTIALS = True
 

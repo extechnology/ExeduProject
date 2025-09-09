@@ -1,8 +1,18 @@
-from django.urls import path
+from django.urls import path,include
 from .views import *
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.routers import DefaultRouter
+
+
+router = DefaultRouter()
+
+router.register(r"attendance", AttendanceViewSet, basename="attendance")
+router.register(r"student/profile", StudentProfileViewset, basename="profile")
 
 urlpatterns = [
+    
+    path("", include(router.urls)),
+    
     path('register/',RegisterView.as_view()),
     
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
@@ -50,5 +60,6 @@ urlpatterns = [
     path("password-reset/", PasswordResetView.as_view(), name="password-reset"),
     
     path("password-reset-confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
-
+    
+    
 ]
