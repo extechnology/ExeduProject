@@ -71,15 +71,59 @@ class CoursePageDetails(models.Model):
         return self.title
     
     
+from django.db import models
+
+
 class Course(models.Model):
-    title = models.CharField(max_length=255, choices=CoursePageDetails.COURSE_OPTIONS)
-    sub_title = models.CharField(max_length=255, null=True, blank=True)
-    description = models.TextField()
-    image = models.ImageField(upload_to='images/', default=None)
+    # If CoursePageDetails already defines course titles, better to use a ForeignKey
+    # Otherwise keep choices directly in this model.
+    COURSE_OPTIONS = [
+        ('ai_advanced_digital_marketing', 'AI Advanced Digital Marketing'),
+        ('graphic_design', 'Graphic Design'),
+        ('ui_ux_design', 'UI/UX Design'),
+        ('web_and_app_development', 'Web & App Development'),
+        ('video_editing', 'Video Editing'),
+        ('robotics', 'Robotics'),
+    ]
+
+    title = models.CharField(
+        max_length=255,
+        choices=COURSE_OPTIONS,
+        db_index=True,
+    )
+    sub_title = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Optional short subtitle for the course"
+    )
+    description = models.TextField(
+        help_text="Detailed description of the course"
+    )
+    image = models.ImageField(
+        upload_to="courses/images/",
+        blank=True,
+        null=True
+    )
+    duration = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="E.g. '6 months' or '40 hours'"
+    )
+    tutor = models.CharField( max_length=255,blank=True, null=True,help_text="Name of the tutor/instructor")
+    price = models.DecimalField(max_digits=10,decimal_places=2,blank=True,null=True,help_text="Course price in INR (or your currency)")
+    created_at = models.DateTimeField(default=timezone.now, editable=False)  
+    updated_at = models.DateTimeField(auto_now=True)      
+
+    class Meta:
+        ordering = ["title"]
+        verbose_name = "Course"
+        verbose_name_plural = "Courses"
 
     def __str__(self):
-        return self.title
-    
+        return dict(self.COURSE_OPTIONS).get(self.title, self.title)
+
     
 class CourseSinglePage(models.Model):
     title = models.ForeignKey(Course, on_delete=models.CASCADE, null=True)
