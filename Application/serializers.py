@@ -15,7 +15,8 @@ from django.core.mail import EmailMultiAlternatives
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
-
+from django.core.validators import RegexValidator
+import re
 
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -496,9 +497,79 @@ class CourseSinglePageSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class EnrollFormSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(
+        max_length=255,
+        required=True,
+        error_messages={
+            'required': 'Name is required.',
+            'blank': 'Name cannot be blank.',
+            'max_length': 'Name cannot exceed 255 characters.'
+        }
+    )
+    
+    phone = serializers.CharField(
+        max_length=15,
+        required=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\+?1?\d{9,15}$',
+                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
+            )
+        ],
+        error_messages={
+            'required': 'Phone number is required.',
+            'blank': 'Phone number cannot be blank.'
+        }
+    )
+    
+    email = serializers.EmailField(
+        required=True,
+        error_messages={
+            'required': 'Email is required.',
+            'blank': 'Email cannot be blank.',
+            'invalid': 'Please enter a valid email address.'
+        }
+    )
+    
+    title = serializers.CharField(
+        max_length=255,
+        required=True,
+        error_messages={
+            'required': 'Course title is required.',
+            'blank': 'Course title cannot be blank.'
+        }
+    )
+
     class Meta:
         model = EnrollForm
-        fields = "__all__"
+        fields = ["id", "name", "phone", "email", "title", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+    def validate_name(self, value):
+        """Custom validation for name field"""
+        if len(value.strip()) < 2:
+            raise serializers.ValidationError("Name must be at least 2 characters long.")
+        return value.strip()
+
+    def validate_phone(self, value):
+        """Custom validation for phone field"""
+        # Remove all non-digit characters
+        phone_digits = re.sub(r'\D', '', value)
+        
+        # Check if it's a valid 10-digit number (assuming Indian format)
+        if len(phone_digits) != 10:
+            raise serializers.ValidationError("Please enter a valid 10-digit phone number.")
+        
+        return phone_digits
+
+    def validate_email(self, value):
+        """Custom validation for email field"""
+        # Check if email already exists
+        if self.instance is None:  # Only for creation, not updates
+            if EnrollForm.objects.filter(email=value.lower()).exists():
+                raise serializers.ValidationError("An enrollment with this email already exists.")
+        
+        return value.lower()
 
 class ProfileSerializer(serializers.ModelSerializer):
     course = serializers.StringRelatedField()
@@ -529,9 +600,26 @@ class PublicProfileSerializer(serializers.ModelSerializer):
         ]
 
 class CertificateSerializer(serializers.ModelSerializer):
+    studentName = serializers.CharField(source="profile.name", read_only=True)
+    studentId = serializers.IntegerField(source="profile.id", read_only=True)
+    course = serializers.CharField(source="profile.course.name", read_only=True)  # adjust if course is FK
+    issueDate = serializers.DateTimeField(source="issued_at", format="%Y-%m-%d", read_only=True)
+    certificateNumber = serializers.UUIDField(source="certificate_number", read_only=True)
+    certificateFile = serializers.FileField(source="certificate_file", read_only=True)
+
     class Meta:
         model = Certificate
-        fields = "__all__"
+        fields = [
+            "id",
+            "studentName",
+            "studentId",
+            "course",
+            "certificateNumber",
+            "issueDate",
+            "grade",
+            "description",
+            "certificateFile",
+        ]
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -564,5 +652,14 @@ class AttendanceSerializer(serializers.ModelSerializer):
         read_only_fields = ["marked_by"]
 
 
+class NotificationSerializer(serializers.ModelSerializer):
+    type_display = serializers.CharField(source="get_type_display", read_only=True)
 
-
+    class Meta:
+        model = Notification
+        fields = [
+            "id", "type", "type_display",
+            "title", "message", "related_id", "related_model",
+            "is_read", "created_at"
+        ]
+        read_only_fields = ["created_at"]

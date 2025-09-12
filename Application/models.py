@@ -181,12 +181,18 @@ class Profile(models.Model):
 
 
 class Certificate(models.Model):
-    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="certificates")
-    certificate_file = models.FileField(upload_to='certificates/')
+    profile = models.ForeignKey(
+        "Profile", on_delete=models.CASCADE, related_name="certificates"
+    )
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True)
+    certificate_file = models.FileField(upload_to="certificates/")
     description = models.TextField(null=True, blank=True)
+    certificate_number = models.UUIDField(default=uuid.uuid4,  editable=False)
+    grade = models.CharField(max_length=50, null=True, blank=True)
+    issued_at = models.DateTimeField(default=timezone.now, editable=False)
 
     def __str__(self):
-        return f"Certificate for {self.profile.phone_number}"
+        return f"Certificate {self.certificate_number} - {self.profile.name}"
     
     
 class Contact(models.Model):
@@ -245,3 +251,25 @@ class StudentAttendance(models.Model):
 
     
 
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ("LOGIN", "New Login"),
+        ("PROFILE", "Profile Access Request"),
+        ("ENQUIRY", "Course Enquiry"),
+        ("ADMISSION", "Admission Form Submission"),
+    ]
+    user = models.ForeignKey(User,on_delete=models.CASCADE,related_name="notifications",null=True, blank=True)
+
+    type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    title = models.CharField(max_length=255)
+    message = models.TextField(blank=True, null=True)
+
+    related_id = models.CharField(max_length=36, null=True, blank=True)  
+
+    related_model = models.CharField(max_length=50, null=True, blank=True)
+
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.get_type_display()} - {self.title}"

@@ -23,6 +23,8 @@ from django.dispatch import receiver
 from django.http import HttpResponse
 from rest_framework.decorators import action
 from django.db import transaction
+from django.core.exceptions import ValidationError
+
 
 class GoogleAuthView(APIView):
     def post(self, request):
@@ -65,7 +67,14 @@ class RegisterView(APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            user = serializer.save() 
+
+            Notification.objects.create(
+                type="REGISTER",  
+                title="New User Registration",
+                message=f"User {user.username} has registered."
+            )
+
             return Response({'message': 'OTP sent to email'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -185,18 +194,47 @@ class CourseSinglePageView(APIView):
         serializer = CourseSinglePageSerializer(course_details, many=True)
         return Response(serializer.data)
 
-
 class EnrollFormView(APIView):
     def get(self, request, format=None):
-        enroll_forms = EnrollForm.objects.all()
+        enroll_forms = EnrollForm.objects.all().order_by('-created_at')
         serializer = EnrollFormSerializer(enroll_forms, many=True)
         return Response(serializer.data)
-    
+
     def post(self, request, format=None):
         serializer = EnrollFormSerializer(data=request.data)
+        
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            try:
+                enroll_form = serializer.save()
+                
+                # Create notification
+                Notification.objects.create(
+                    type="ADMISSION",
+                    title="New Course Enquiry Form Submitted",
+                    message=f"Admission request from {enroll_form.name} ({enroll_form.email}) for {enroll_form.title}",
+                    related_id=enroll_form.id,
+                    related_model="EnrollForm"
+                )
+                
+                return Response(
+                    {
+                        "message": "Enrollment form submitted successfully!",
+                        "data": serializer.data
+                    },
+                    status=status.HTTP_201_CREATED
+                )
+                
+            except ValidationError as e:
+                return Response(
+                    {"general": [str(e)]},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception as e:
+                return Response(
+                    {"general": ["An unexpected error occurred. Please try again."]},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -304,6 +342,7 @@ def request_profile_access(request):
     if profile.can_access_profile:
         return Response({"detail": "Access already granted."}, status=400)
 
+    # ---- SEND EMAIL ----
     subject = "🔔 Profile Access Request"
     from_email = settings.DEFAULT_FROM_EMAIL
     to_email = [admin[1] for admin in settings.ADMINS]
@@ -320,6 +359,16 @@ def request_profile_access(request):
     msg.attach_alternative(html_content, "text/html")
     msg.send()
 
+    Notification.objects.create(
+        user=request.user,
+        type="PROFILE",
+        title="Profile Access Request",
+        message=f"User {user.username} ({user.email}) has requested profile access.",
+        related_id=str(profile.unique_id),
+        related_model="Profile"
+    )
+
+
     return Response({"detail": "Access request sent."})
 
 
@@ -330,34 +379,54 @@ class ValidateTokenView(APIView):
 
     def get(self, request):
         return Response({"message": "Token is valid"}, status=status.HTTP_200_OK)
-    
 
-class CertificateView(APIView):
-    permission_classes = [IsAuthenticated]
+# class StudentCertificateView(APIView):
+#     def get(self, request, student_id):
+#         try:
+#             student = Student.objects.get(id=student_id)
+#             certificates = Certificate.objects.filter(student=student)
+#             serializer = CertificateSerializer(certificates, many=True)
+#             return Response(serializer.data)
+#         except Student.DoesNotExist:
+#             return Response({'error': 'Student not found'}, status=status.HTTP_404_NOT_FOUND)
+#         except Certificate.DoesNotExist:
+#             return Response({'error': 'Certificate not found'}, status=status.HTTP_404_NOT_FOUND)
+#     def post(self, request, student_id):
+#         try:
+#             student = Student.objects.get(id=student_id)
+#             serializer = CertificateSerializer(data=request.data)
+#             if serializer.is_valid():
+#                 serializer.save(student=student)
+#                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         except Student.DoesNotExist:
+#             return Response({'error': 'Student not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    def get(self, request, format=None):
-        try:
-            profile = request.user.profile  
-        except Profile.DoesNotExist:
-            return Response({'error': 'Profile not found.'}, status=404)
+class CertificateListCreateView(generics.ListCreateAPIView):
+    serializer_class = CertificateSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-        certificates = Certificate.objects.filter(profile=profile)
-        serializer = CertificateSerializer(certificates, many=True)
-        return Response(serializer.data)
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return Certificate.objects.all()  
+        return Certificate.objects.filter(profile=self.request.user.profile)
 
-    def post(self, request, format=None):
-        try:
-            profile = request.user.profile
-        except Profile.DoesNotExist:
-            return Response({'error': 'Profile not found.'}, status=404)
-    
-        data = request.data.copy()
-        data['profile'] = profile.pk 
-        serializer = CertificateSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        if self.request.user.is_staff and 'profile' in self.request.data:
+            serializer.save(profile_id=self.request.data['profile'])
+        else:
+            serializer.save(profile=self.request.user.profile)
+
+
+class CertificateDetailView(generics.RetrieveDestroyAPIView):
+    serializer_class = CertificateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return Certificate.objects.all()
+        return Certificate.objects.filter(profile=self.request.user.profile)
+
 
 
 
@@ -377,12 +446,41 @@ class ContactView(APIView):
     def post(self, request, format=None):
         serializer = ContactSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            contact = serializer.save() 
+
+            Notification.objects.create(
+                type="ENQUIRY",
+                title="New Admission Enquiry",
+                message=f"Enquiry from {contact.name} ({contact.email})",
+                related_id=contact.id,
+                related_model="Contact"
+            )
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     
+class NotificationViewSet(viewsets.ModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Notification.objects.all()
 
+    @action(detail=True, methods=["patch"], url_path="mark-read")
+    def mark_read(self, request, pk=None):
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save()
+        return Response({"status": "marked as read"}, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=["patch"], url_path="mark-all-read")
+    def mark_all_read(self, request):
+        notifications = self.queryset.filter(is_read=False)
+        count = notifications.update(is_read=True)
+        return Response({"status": f"{count} notifications marked as read"}, status=status.HTTP_200_OK)
+
+
+        
+        
 
 class AttendanceViewSet(viewsets.ModelViewSet):
     queryset = StudentAttendance.objects.all().select_related("student", "student_course")

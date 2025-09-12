@@ -8,6 +8,7 @@ router = DefaultRouter()
 
 router.register(r"attendance", AttendanceViewSet, basename="attendance")
 router.register(r"student/profile", StudentProfileViewset, basename="profile")
+router.register(r"notification", NotificationViewSet, basename="notification")
 
 urlpatterns = [
     
@@ -53,7 +54,9 @@ urlpatterns = [
     
     path("request-profile-access/", request_profile_access, name="request-profile-access"),
     
-    path('certificate/',CertificateView.as_view(),name='certificate'),
+    path('certificate/',CertificateListCreateView.as_view(),name='certificate'),
+    
+    path("certificates/<int:pk>/", CertificateDetailView.as_view(), name="certificate-detail"),
     
     path("public-certificates/<uuid:unique_id>/", public_certificates),
 
