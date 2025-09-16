@@ -572,12 +572,18 @@ class EnrollFormSerializer(serializers.ModelSerializer):
         return value.lower()
 
 class ProfileSerializer(serializers.ModelSerializer):
-    course = serializers.StringRelatedField()
-
+    course = serializers.PrimaryKeyRelatedField(
+        queryset=Course.objects.all(),
+        allow_null=True,
+        required=False
+    )
+    course_name = serializers.CharField(source="course.get_title_display", read_only=True)
 
     class Meta:
         model = Profile
         fields = "__all__"
+
+
 
 
 class PublicProfileSerializer(serializers.ModelSerializer):

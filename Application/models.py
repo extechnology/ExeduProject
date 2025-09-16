@@ -75,8 +75,6 @@ from django.db import models
 
 
 class Course(models.Model):
-    # If CoursePageDetails already defines course titles, better to use a ForeignKey
-    # Otherwise keep choices directly in this model.
     COURSE_OPTIONS = [
         ('ai_advanced_digital_marketing', 'AI Advanced Digital Marketing'),
         ('graphic_design', 'Graphic Design'),
@@ -249,7 +247,6 @@ class StudentAttendance(models.Model):
         return f"{self.student} - {self.student_course} - {self.date} ({self.status})"
 
 
-    
 
 class Notification(models.Model):
     NOTIFICATION_TYPES = [
