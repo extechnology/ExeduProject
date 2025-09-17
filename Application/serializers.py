@@ -474,10 +474,14 @@ class UploadedImagesSerializer(serializers.ModelSerializer):
         model = UploadedImages
         fields = "__all__"
 
+
 class CourseSerializer(serializers.ModelSerializer):
+    title_display = serializers.CharField(source="get_title_display", read_only=True)
+
     class Meta:
         model = Course
-        fields = "__all__"
+        fields = ['id', 'title','sub_title', 'title_display','description', 'image', 'duration', 'tutor', 'price']
+
 
 class SectionImagesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -578,6 +582,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         required=False
     )
     course_name = serializers.CharField(source="course.get_title_display", read_only=True)
+    batch_number = serializers.CharField(source="batch.batch_number", read_only=True)  # display only
+    batch = serializers.PrimaryKeyRelatedField(queryset=Batches.objects.all(), allow_null=True) 
 
     class Meta:
         model = Profile
@@ -669,3 +675,24 @@ class NotificationSerializer(serializers.ModelSerializer):
             "is_read", "created_at"
         ]
         read_only_fields = ["created_at"]
+        
+        
+class TutorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TutorName
+        fields = "__all__"
+
+class BatchSerializer(serializers.ModelSerializer):
+    tutor = TutorSerializer(read_only=True)
+    tutor_id = serializers.PrimaryKeyRelatedField(
+        queryset=TutorName.objects.all(), source="tutor", write_only=True
+    )
+    course_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Batches
+        fields = "__all__"  
+
+    def get_course_name(self, obj):
+        return obj.course.title if obj.course else None
+

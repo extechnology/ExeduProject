@@ -74,6 +74,16 @@ class CoursePageDetails(models.Model):
 from django.db import models
 
 
+
+class TutorName(models.Model):
+    name = models.CharField(max_length=500)
+    email = models.EmailField(null=True, blank=True)
+    phone_number = models.CharField(max_length=15, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+    
+    
 class Course(models.Model):
     COURSE_OPTIONS = [
         ('ai_advanced_digital_marketing', 'AI Advanced Digital Marketing'),
@@ -109,7 +119,8 @@ class Course(models.Model):
         null=True,
         help_text="E.g. '6 months' or '40 hours'"
     )
-    tutor = models.CharField( max_length=255,blank=True, null=True,help_text="Name of the tutor/instructor")
+    tutor = models.ForeignKey(TutorName, on_delete=models.SET_NULL, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
     price = models.DecimalField(max_digits=10,decimal_places=2,blank=True,null=True,help_text="Course price in INR (or your currency)")
     created_at = models.DateTimeField(default=timezone.now, editable=False)  
     updated_at = models.DateTimeField(auto_now=True)      
@@ -145,6 +156,19 @@ class EnrollForm(models.Model):
 
     def __str__(self):
         return self.title if self.title else "Untitled Enrollment" 
+    
+
+
+class Batches(models.Model):
+    tutor = models.ForeignKey(TutorName, on_delete=models.CASCADE, related_name='batches')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='batches')    
+    time_start = models.TimeField(auto_now_add=False, null=True, blank=True)
+    duration = models.CharField(max_length=255, null=True, blank=True)
+    date = models.DateField(auto_now_add=False, null=True, blank=True)
+    batch_number = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.tutor.name} - {self.course.title}"
 
 
 class Profile(models.Model):
@@ -169,7 +193,7 @@ class Profile(models.Model):
     
     course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True)
     enrolled_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
-    bach_number = models.CharField(max_length=255, null=True, blank=True)
+    batch = models.ForeignKey(Batches, on_delete=models.SET_NULL, null=True, blank=True)
     payment_completed = models.BooleanField(default=False)
     paid_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     paid_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
@@ -204,24 +228,7 @@ class Contact(models.Model):
         return self.name
 
 
-class TutorName(models.Model):
-    name = models.CharField(max_length=500)
-    email = models.EmailField(null=True, blank=True)
-    phone_number = models.CharField(max_length=15, null=True, blank=True)
 
-    def __str__(self):
-        return self.name
-
-class Batches(models.Model):
-    tutor = models.ForeignKey(TutorName, on_delete=models.CASCADE, related_name='batches')
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='batches')    
-    time_start = models.TimeField(auto_now_add=False, null=True, blank=True)
-    time_end = models.TimeField(auto_now_add=False, null=True, blank=True)
-    date = models.DateField(auto_now_add=False, null=True, blank=True)
-    batch_number = models.CharField(max_length=255, null=True, blank=True)
-
-    def __str__(self):
-        return f"{self.tutor.name} - {self.course.title}"
 
 
 

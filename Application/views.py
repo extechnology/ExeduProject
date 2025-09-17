@@ -172,11 +172,11 @@ class CourseUpdateView(APIView):
     
 class CourseOptionsView(APIView):
     def get(self, request, format=None):
-        options = [
-            {"value": key, "label": label}
-            for key, label in CoursePageDetails.COURSE_OPTIONS
-        ]
+        courses = Course.objects.all()
+        options = [{"id": c.id, "title": dict(Course.COURSE_OPTIONS).get(c.title, c.title)} for c in courses]
         return Response(options)
+
+
 
     
 class CoursePageDetailsView(APIView):
@@ -238,6 +238,16 @@ class EnrollFormView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+class BatchViewSet(viewsets.ModelViewSet):
+    queryset = Batches.objects.all().select_related("tutor", "course")
+    serializer_class = BatchSerializer
+
+
+class TutorViewSet(viewsets.ModelViewSet):
+    queryset = TutorName.objects.all()
+    serializer_class = TutorSerializer
+    
 
 class StudentProfileViewset(viewsets.ModelViewSet):
     queryset = Profile.objects.all()
@@ -443,6 +453,11 @@ def public_certificates(request, unique_id):
 
 
 class ContactView(APIView):
+    def get(self, request):
+        contacts = Contact.objects.all()
+        serializer = ContactSerializer(contacts, many=True)
+        return Response(serializer.data)
+    
     def post(self, request, format=None):
         serializer = ContactSerializer(data=request.data)
         if serializer.is_valid():

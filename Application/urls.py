@@ -9,6 +9,9 @@ router = DefaultRouter()
 router.register(r"attendance", AttendanceViewSet, basename="attendance")
 router.register(r"student/profile", StudentProfileViewset, basename="profile")
 router.register(r"notification", NotificationViewSet, basename="notification")
+router.register(r"batches", BatchViewSet, basename="batches")
+router.register(r"tutor", TutorViewSet, basename="tutor")
+
 
 urlpatterns = [
     
@@ -67,6 +70,5 @@ urlpatterns = [
     path("password-reset/", PasswordResetView.as_view(), name="password-reset"),
     
     path("password-reset-confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
-    
     
 ]
