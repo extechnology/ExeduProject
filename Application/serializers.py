@@ -749,8 +749,11 @@ class SessionSerializer(serializers.ModelSerializer):
 
         
     def create(self, validated_data):
+        
         students_data = validated_data.pop("students", [])
-        session = super().create(validated_data)
+        tutor = validated_data.pop("tutor", None)
+    
+        session = Session.objects.create(tutor=tutor, **validated_data)
         session.students.set(students_data)
 
         session_time = localtime(session.start_time)

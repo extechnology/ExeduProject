@@ -79,6 +79,7 @@ class TutorName(models.Model):
     name = models.CharField(max_length=500)
     email = models.EmailField(null=True, blank=True)
     phone_number = models.CharField(max_length=15, null=True, blank=True)
+    image = models.ImageField(upload_to='tutors/', null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -299,6 +300,7 @@ class Session(models.Model):
         related_name="student_sessions",
         blank=True
     )
+    created_at = models.DateTimeField(auto_now_add=True , null=True, blank=True)
 
     @property
     def end_time(self):
