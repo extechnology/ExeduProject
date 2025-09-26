@@ -177,7 +177,6 @@ class CourseOptionsView(APIView):
         return Response(options)
 
 
-
     
 class CoursePageDetailsView(APIView):
     def get(self, request, format=None):
@@ -186,7 +185,6 @@ class CoursePageDetailsView(APIView):
         return Response(serializer.data)
 
     
-
     
 class CourseSinglePageView(APIView):
     def get(self, request, format=None):
@@ -492,6 +490,13 @@ class NotificationViewSet(viewsets.ModelViewSet):
         notifications = self.queryset.filter(is_read=False)
         count = notifications.update(is_read=True)
         return Response({"status": f"{count} notifications marked as read"}, status=status.HTTP_200_OK)
+    
+    def get_queryset(self):
+        qs = Notification.objects.filter(user=self.request.user).order_by("-created_at")
+        notif_type = self.request.query_params.get("type")
+        if notif_type:
+            qs = qs.filter(type=notif_type)
+        return qs
 
 
         
@@ -586,3 +591,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         )
 
 
+class SessionViewSet(viewsets.ModelViewSet):
+    queryset = Session.objects.all()
+    serializer_class = SessionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    

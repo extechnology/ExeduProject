@@ -2,7 +2,7 @@ from django.db import models
 import uuid
 from django.contrib.auth.models import User
 from django.utils import timezone
-
+from datetime import timedelta
 
 
 class EmailOTP(models.Model):
@@ -197,6 +197,10 @@ class Profile(models.Model):
     payment_completed = models.BooleanField(default=False)
     paid_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     paid_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
+    progress = models.PositiveIntegerField(default=0,help_text="Overall student progress in percentage (0–100)")
+
+    def __str__(self):
+        return f"{self.user.username} - {self.progress}%"
     
     def __str__(self):
         return f"{self.name or 'Unnamed'} - {self.email or 'No Email'}"
@@ -229,9 +233,6 @@ class Contact(models.Model):
 
 
 
-
-
-
 class StudentAttendance(models.Model):
     
     STATUS_CHOICES = [
@@ -261,6 +262,7 @@ class Notification(models.Model):
         ("PROFILE", "Profile Access Request"),
         ("ENQUIRY", "Course Enquiry"),
         ("ADMISSION", "Admission Form Submission"),
+        ("SESSION", "New Session"),
     ]
     user = models.ForeignKey(User,on_delete=models.CASCADE,related_name="notifications",null=True, blank=True)
 
@@ -277,3 +279,35 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.get_type_display()} - {self.title}"
+
+
+
+
+class Session(models.Model):
+    title = models.CharField(max_length=255, blank=True, null=True) 
+    start_time = models.DateTimeField(default=timezone.now)  
+    duration = models.DurationField(default=timedelta(hours=1)) 
+    tutor = models.ForeignKey(
+        "TutorName",  
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tutor_sessions"
+    )
+    students = models.ManyToManyField(
+        "Profile",
+        related_name="student_sessions",
+        blank=True
+    )
+
+    @property
+    def end_time(self):
+        return self.start_time + self.duration
+
+    @property
+    def is_active(self):
+        now = timezone.now()
+        return self.start_time <= now <= self.end_time
+
+    def __str__(self):
+        return f"Session with {self.tutor} on {self.start_time.strftime('%Y-%m-%d %H:%M')}"

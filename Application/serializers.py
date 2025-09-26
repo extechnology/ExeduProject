@@ -17,6 +17,8 @@ from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
 from django.core.validators import RegexValidator
 import re
+from django.utils.timezone import localtime
+
 
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -576,6 +578,7 @@ class EnrollFormSerializer(serializers.ModelSerializer):
         return value.lower()
 
 class ProfileSerializer(serializers.ModelSerializer):
+    course_details = CourseSerializer(source="course", read_only=True)
     course = serializers.PrimaryKeyRelatedField(
         queryset=Course.objects.all(),
         allow_null=True,
@@ -588,7 +591,6 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = "__all__"
-
 
 
 
@@ -614,7 +616,8 @@ class PublicProfileSerializer(serializers.ModelSerializer):
 class CertificateSerializer(serializers.ModelSerializer):
     studentName = serializers.CharField(source="profile.name", read_only=True)
     studentId = serializers.IntegerField(source="profile.id", read_only=True)
-    course = serializers.CharField(source="profile.course.name", read_only=True)  # adjust if course is FK
+    course = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
+    courseName = serializers.CharField(source="course.name", read_only=True)
     issueDate = serializers.DateTimeField(source="issued_at", format="%Y-%m-%d", read_only=True)
     certificateNumber = serializers.UUIDField(source="certificate_number", read_only=True)
     certificateFile = serializers.FileField(source="certificate_file", read_only=True)
@@ -626,6 +629,7 @@ class CertificateSerializer(serializers.ModelSerializer):
             "studentName",
             "studentId",
             "course",
+            "courseName",
             "certificateNumber",
             "issueDate",
             "grade",
@@ -682,6 +686,7 @@ class TutorSerializer(serializers.ModelSerializer):
         model = TutorName
         fields = "__all__"
 
+
 class BatchSerializer(serializers.ModelSerializer):
     tutor = TutorSerializer(read_only=True)
     tutor_id = serializers.PrimaryKeyRelatedField(
@@ -695,4 +700,76 @@ class BatchSerializer(serializers.ModelSerializer):
 
     def get_course_name(self, obj):
         return obj.course.title if obj.course else None
+
+
+
+
+# class SessionSerializer(serializers.ModelSerializer):
+#     tutor_details = ProfileSerializer(source="tutor", read_only=True)
+#     student_details = ProfileSerializer(source="students", many=True, read_only=True)
+#     tutor = serializers.PrimaryKeyRelatedField(
+#         queryset=Profile.objects.all(), allow_null=True
+#     )
+#     students = serializers.PrimaryKeyRelatedField(
+#         queryset=Profile.objects.all(), many=True, required=False
+#     )
+
+#     class Meta:
+#         model = Session
+#         fields = "__all__"
+
+
+class SessionSerializer(serializers.ModelSerializer):
+    tutor = serializers.PrimaryKeyRelatedField(
+        queryset=TutorName.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    students = serializers.PrimaryKeyRelatedField(
+        queryset=Profile.objects.all(),
+        many=True,
+        required=False
+    )
+
+    tutor_details = TutorSerializer(source="tutor", read_only=True)
+    student_details = ProfileSerializer(source="students", many=True, read_only=True)
+
+    class Meta:
+        model = Session
+        fields = [
+            "id",
+            "title",
+            "start_time",
+            "duration",
+            "tutor",
+            "students",
+            "tutor_details",
+            "student_details",
+        ]
+
+        
+    def create(self, validated_data):
+        students_data = validated_data.pop("students", [])
+        session = super().create(validated_data)
+        session.students.set(students_data)
+
+        session_time = localtime(session.start_time)
+        session_date_str = session_time.strftime("%B %d, %Y")  
+        session_time_str = session_time.strftime("%I:%M %p") 
+
+        for student in students_data:
+            Notification.objects.create(
+                user=student.user,
+                type="SESSION",
+                title="New Session Scheduled",
+                message=(
+                    f"Hi {student.name}, a new session "
+                    f"'{session.title or 'Untitled Session'}' "
+                    f"has been created on {session_date_str} at {session_time_str}."
+                ),
+                related_id=str(session.id),
+                related_model="Session",
+            )
+
+        return session
 
