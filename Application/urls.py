@@ -12,6 +12,8 @@ router.register(r"notification", NotificationViewSet, basename="notification")
 router.register(r"batches", BatchViewSet, basename="batches")
 router.register(r"tutor", TutorViewSet, basename="tutor")
 router.register(r"session", SessionViewSet, basename="session")
+router.register(r"student-session", StudentSessionViewSet, basename="student-session")
+router.register(r"works", StudentWorksViewSet, basename="works")
 
 
 

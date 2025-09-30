@@ -24,7 +24,8 @@ from django.http import HttpResponse
 from rest_framework.decorators import action
 from django.db import transaction
 from django.core.exceptions import ValidationError
-
+from django.db.models import Q
+from datetime import datetime
 
 class GoogleAuthView(APIView):
     def post(self, request):
@@ -67,12 +68,12 @@ class RegisterView(APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save() 
 
+            data = serializer.save()
             Notification.objects.create(
-                type="REGISTER",  
+                type="REGISTER",
                 title="New User Registration",
-                message=f"User {user.username} has registered."
+                message=f"OTP sent to {data['email']} for registration."
             )
 
             return Response({'message': 'OTP sent to email'}, status=status.HTTP_201_CREATED)
@@ -475,7 +476,7 @@ class ContactView(APIView):
     
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
     queryset = Notification.objects.all()
 
     @action(detail=True, methods=["patch"], url_path="mark-read")
@@ -492,11 +493,16 @@ class NotificationViewSet(viewsets.ModelViewSet):
         return Response({"status": f"{count} notifications marked as read"}, status=status.HTTP_200_OK)
     
     def get_queryset(self):
-        qs = Notification.objects.filter(user=self.request.user).order_by("-created_at")
+        user = self.request.user
+        if not user.is_authenticated:
+            return Notification.objects.none()  # safe, returns []
+        qs = Notification.objects.filter(user=user).order_by("-created_at")
         notif_type = self.request.query_params.get("type")
         if notif_type:
             qs = qs.filter(type=notif_type)
         return qs
+
+
 
 
         
@@ -522,17 +528,15 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         return obj
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        date = self.request.query_params.get("date")
-        course_id = self.request.query_params.get("course")
-        student_id = self.request.query_params.get("student")
+        user = self.request.user
+        queryset = StudentAttendance.objects.all()
 
-        if date:
-            queryset = queryset.filter(date=date)
+        if hasattr(user, "profile"):
+            queryset = queryset.filter(student=user.profile)
+
+        course_id = self.request.query_params.get("course")
         if course_id:
             queryset = queryset.filter(student_course_id=course_id)
-        if student_id:
-            queryset = queryset.filter(student_id=student_id)
 
         return queryset
 
@@ -589,11 +593,61 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK,
         )
+        
+    @action(detail=False, methods=["post"])
+    def mark_self(self, request):
+        """
+        Allows a logged-in student to mark their own attendance.
+        """
+        user = request.user
+        if not hasattr(user, "profile"):
+            return Response({"error": "Profile not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile = user.profile
+        course_id = request.data.get("course_id")
+        if not course_id:
+            return Response({"error": "course_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        today = datetime.now().date()
+
+        obj, created = StudentAttendance.objects.get_or_create(
+            student=profile,
+            student_course_id=course_id,
+            date=today,
+            defaults={
+                "status": "pending",  # or "present" if you want direct marking
+                "marked_by": None,   # tutor not involved
+                "attended_at": datetime.now().time(),
+            },
+        )
+
+        serializer = self.get_serializer(obj)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class SessionViewSet(viewsets.ModelViewSet):
     queryset = Session.objects.all()
     serializer_class = SessionSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
+
+class StudentSessionViewSet(viewsets.ModelViewSet):
+    serializer_class = SessionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if hasattr(user, "profile"):
+            return Session.objects.filter(students=user.profile)
+
+        return Session.objects.filter(
+            Q(students=user.profile) | Q(tutor__user=user)
+        ).distinct()
+
+
+
+class StudentWorksViewSet(viewsets.ModelViewSet):
+    serializer_class = StudentWorkSerializer
+    queryset = StudentWorks.objects.all()
+
     

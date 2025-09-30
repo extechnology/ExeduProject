@@ -733,12 +733,17 @@ class SessionSerializer(serializers.ModelSerializer):
 
     tutor_details = TutorSerializer(source="tutor", read_only=True)
     student_details = ProfileSerializer(source="students", many=True, read_only=True)
+    course_details = CourseSerializer(source="course", read_only=True)
+    attendance_details = AttendanceSerializer(source="studentattendance", many=True, read_only=True)
 
     class Meta:
         model = Session
         fields = [
             "id",
             "title",
+            "course",
+            "course_details",
+            "attendance_details",
             "start_time",
             "duration",
             "tutor",
@@ -746,7 +751,6 @@ class SessionSerializer(serializers.ModelSerializer):
             "tutor_details",
             "student_details",
         ]
-
         
     def create(self, validated_data):
         
@@ -776,3 +780,7 @@ class SessionSerializer(serializers.ModelSerializer):
 
         return session
 
+class StudentWorkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentWorks
+        fields = "__all__"

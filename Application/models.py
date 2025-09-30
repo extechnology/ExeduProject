@@ -232,20 +232,32 @@ class Contact(models.Model):
     def __str__(self):
         return self.name
 
+class StudentWorks(models.Model):
+    student = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="works")
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    image = models.ImageField(upload_to='works/')
+    link = models.URLField(null=True, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
 
 
 class StudentAttendance(models.Model):
     
     STATUS_CHOICES = [
+        ("pending", "Pending"),
         ("present", "Present"),
         ("absent", "Absent"),
         ("late", "Late"),
     ]
 
     student = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="attendance_records")
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="attendance")
     student_course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='attendances')
     date = models.DateField()
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
     attended_at = models.TimeField(auto_now_add=False, null=True, blank=True)
     marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="marked_attendance")
 
@@ -282,10 +294,9 @@ class Notification(models.Model):
         return f"{self.get_type_display()} - {self.title}"
 
 
-
-
 class Session(models.Model):
-    title = models.CharField(max_length=255, blank=True, null=True) 
+    title = models.CharField(max_length=255, blank=True, null=True)
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True) 
     start_time = models.DateTimeField(default=timezone.now)  
     duration = models.DurationField(default=timedelta(hours=1)) 
     tutor = models.ForeignKey(
