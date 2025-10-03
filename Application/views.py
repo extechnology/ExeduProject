@@ -529,16 +529,22 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = StudentAttendance.objects.all()
+        queryset = StudentAttendance.objects.all().select_related("student", "student_course")
 
-        if hasattr(user, "profile"):
+        if hasattr(user, "profile") and not user.is_staff:
             queryset = queryset.filter(student=user.profile)
 
         course_id = self.request.query_params.get("course")
         if course_id:
             queryset = queryset.filter(student_course_id=course_id)
 
+        date = self.request.query_params.get("date")
+        if date:
+            queryset = queryset.filter(date=date) 
+
         return queryset
+
+
 
     @action(detail=False, methods=["post"])
     def bulk(self, request):
@@ -596,9 +602,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         
     @action(detail=False, methods=["post"])
     def mark_self(self, request):
-        """
-        Allows a logged-in student to mark their own attendance.
-        """
         user = request.user
         if not hasattr(user, "profile"):
             return Response({"error": "Profile not found"}, status=status.HTTP_400_BAD_REQUEST)
@@ -615,8 +618,8 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             student_course_id=course_id,
             date=today,
             defaults={
-                "status": "pending",  # or "present" if you want direct marking
-                "marked_by": None,   # tutor not involved
+                "status": "pending", 
+                "marked_by": None,  
                 "attended_at": datetime.now().time(),
             },
         )
@@ -648,6 +651,10 @@ class StudentSessionViewSet(viewsets.ModelViewSet):
 
 class StudentWorksViewSet(viewsets.ModelViewSet):
     serializer_class = StudentWorkSerializer
-    queryset = StudentWorks.objects.all()
 
+    def get_queryset(self):
+        profile = getattr(self.request.user, "profile", None)
+        if profile:
+            return StudentWorks.objects.filter(student=profile)
+        return StudentWorks.objects.none()
     

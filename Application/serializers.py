@@ -734,7 +734,8 @@ class SessionSerializer(serializers.ModelSerializer):
     tutor_details = TutorSerializer(source="tutor", read_only=True)
     student_details = ProfileSerializer(source="students", many=True, read_only=True)
     course_details = CourseSerializer(source="course", read_only=True)
-    attendance_details = AttendanceSerializer(source="studentattendance", many=True, read_only=True)
+    attendance_details = AttendanceSerializer(source="attendance",  many=True, read_only=True)
+
 
     class Meta:
         model = Session

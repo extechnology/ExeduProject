@@ -242,6 +242,39 @@ class StudentWorks(models.Model):
 
     def __str__(self):
         return self.title
+    
+    
+class Session(models.Model):
+    title = models.CharField(max_length=255, blank=True, null=True)
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True) 
+    start_time = models.DateTimeField(default=timezone.now)  
+    duration = models.DurationField(default=timedelta(hours=1)) 
+    tutor = models.ForeignKey(
+        "TutorName",  
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tutor_sessions"
+    )
+    students = models.ManyToManyField(
+        "Profile",
+        related_name="student_sessions",
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True , null=True, blank=True)
+
+    @property
+    def end_time(self):
+        return self.start_time + self.duration
+
+    @property
+    def is_active(self):
+        now = timezone.now()
+        return self.start_time <= now <= self.end_time
+
+    def __str__(self):
+        return f"Session with {self.tutor} on {self.start_time.strftime('%Y-%m-%d %H:%M')}"
+
 
 
 class StudentAttendance(models.Model):
@@ -254,7 +287,7 @@ class StudentAttendance(models.Model):
     ]
 
     student = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="attendance_records")
-    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="attendance")
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="attendance", null=True, blank=True)
     student_course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='attendances')
     date = models.DateField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
@@ -294,33 +327,3 @@ class Notification(models.Model):
         return f"{self.get_type_display()} - {self.title}"
 
 
-class Session(models.Model):
-    title = models.CharField(max_length=255, blank=True, null=True)
-    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True) 
-    start_time = models.DateTimeField(default=timezone.now)  
-    duration = models.DurationField(default=timedelta(hours=1)) 
-    tutor = models.ForeignKey(
-        "TutorName",  
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="tutor_sessions"
-    )
-    students = models.ManyToManyField(
-        "Profile",
-        related_name="student_sessions",
-        blank=True
-    )
-    created_at = models.DateTimeField(auto_now_add=True , null=True, blank=True)
-
-    @property
-    def end_time(self):
-        return self.start_time + self.duration
-
-    @property
-    def is_active(self):
-        now = timezone.now()
-        return self.start_time <= now <= self.end_time
-
-    def __str__(self):
-        return f"Session with {self.tutor} on {self.start_time.strftime('%Y-%m-%d %H:%M')}"
