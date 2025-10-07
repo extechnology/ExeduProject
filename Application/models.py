@@ -161,15 +161,14 @@ class EnrollForm(models.Model):
 
 
 class Batches(models.Model):
-    tutor = models.ForeignKey(TutorName, on_delete=models.CASCADE, related_name='batches')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='batches')    
     time_start = models.TimeField(auto_now_add=False, null=True, blank=True)
-    duration = models.CharField(max_length=255, null=True, blank=True)
+    end_date = models.DateField(auto_now_add=False, null=True, blank=True)
     date = models.DateField(auto_now_add=False, null=True, blank=True)
     batch_number = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.tutor.name} - {self.course.title}"
+        return f"{self.course.title}"
 
 
 class Profile(models.Model):

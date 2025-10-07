@@ -239,7 +239,7 @@ class EnrollFormView(APIView):
 
 
 class BatchViewSet(viewsets.ModelViewSet):
-    queryset = Batches.objects.all().select_related("tutor", "course")
+    queryset = Batches.objects.all().select_related( "course")
     serializer_class = BatchSerializer
 
 
@@ -425,6 +425,22 @@ class CertificateListCreateView(generics.ListCreateAPIView):
             serializer.save(profile_id=self.request.data['profile'])
         else:
             serializer.save(profile=self.request.user.profile)
+            
+            
+            
+class InstituteCertificateListCreateView(generics.ListCreateAPIView):
+    serializer_class = CertificateSerializer
+    permission_classes = [permissions.IsAdminUser] 
+
+    def get_queryset(self):
+        return Certificate.objects.all() 
+
+    def perform_create(self, serializer):
+        profile_id = self.request.data.get("profile")
+        if not profile_id:
+            raise ValidationError({"profile": "This field is required."})
+        serializer.save(profile_id=profile_id)
+
 
 
 class CertificateDetailView(generics.RetrieveDestroyAPIView):

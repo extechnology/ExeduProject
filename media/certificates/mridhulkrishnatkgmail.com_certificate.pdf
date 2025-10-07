@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="module">import { injectIntoGlobalHook } from "/@react-refresh";
+injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;</script>
+
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/ex_edu_logo-03.png" />
+
+    <!-- Title & Description -->
+    <title>Exedu CRM - Educational Management System</title>
+    <meta
+      name="description"
+      content="Comprehensive educational CRM for managing students, courses, attendance, and certificates."
+    />
+    <meta name="author" content="Exedu CRM" />
+
+    <!-- Open Graph (Facebook, LinkedIn, etc.) -->
+    <meta property="og:title" content="Exedu CRM - Educational Management System" />
+    <meta
+      property="og:description"
+      content="Comprehensive educational CRM for managing students, courses, attendance, and certificates."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://exedu.in" />
+    <meta property="og:image" content="https://exedu.in/ex_edu_logo-03.png" />
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:creator" content="@exedu" />
+    <meta name="twitter:title" content="Exedu CRM - Educational Management System" />
+    <meta
+      name="twitter:description"
+      content="Comprehensive educational CRM for managing students, courses, attendance, and certificates."
+    />
+    <meta name="twitter:image" content="https://exedu.in/ex_edu_logo-03.png" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx?t=1759492403022"></script>
+  </body>
+</html>

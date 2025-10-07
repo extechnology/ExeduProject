@@ -65,6 +65,8 @@ urlpatterns = [
     
     path("certificates/<int:pk>/", CertificateDetailView.as_view(), name="certificate-detail"),
     
+    path("generate-certificate/", InstituteCertificateListCreateView.as_view(), name="generate-certificate"),
+    
     path("public-certificates/<uuid:unique_id>/", public_certificates),
 
     path("profile/meta/<uuid:unique_id>/", profile_meta_preview, name="profile-meta"),

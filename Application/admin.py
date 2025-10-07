@@ -33,5 +33,16 @@ admin.site.register(SectionImages)
 
 admin.site.register(CourseSinglePage)
 
-
 admin.site.register(StudentAttendance)
+
+admin.site.register(UploadedImages)
+
+admin.site.register(Notification)
+
+admin.site.register(Session)
+
+admin.site.register(StudentWorks)
+
+admin.site.register(Batches)
+
+admin.site.register(TutorName)

@@ -479,10 +479,11 @@ class UploadedImagesSerializer(serializers.ModelSerializer):
 
 class CourseSerializer(serializers.ModelSerializer):
     title_display = serializers.CharField(source="get_title_display", read_only=True)
+    tutor_name = serializers.CharField(source="tutor.name", read_only=True)
 
     class Meta:
         model = Course
-        fields = ['id', 'title','sub_title', 'title_display','description', 'image', 'duration', 'tutor', 'price']
+        fields = ['id', 'title','sub_title', 'title_display','description',"tutor_name", 'image', 'duration', 'tutor', 'price']
 
 
 class SectionImagesSerializer(serializers.ModelSerializer):
@@ -620,7 +621,7 @@ class CertificateSerializer(serializers.ModelSerializer):
     courseName = serializers.CharField(source="course.name", read_only=True)
     issueDate = serializers.DateTimeField(source="issued_at", format="%Y-%m-%d", read_only=True)
     certificateNumber = serializers.UUIDField(source="certificate_number", read_only=True)
-    certificateFile = serializers.FileField(source="certificate_file", read_only=True)
+    certificateFile = serializers.FileField(source="certificate_file", required=True)
 
     class Meta:
         model = Certificate
@@ -688,10 +689,6 @@ class TutorSerializer(serializers.ModelSerializer):
 
 
 class BatchSerializer(serializers.ModelSerializer):
-    tutor = TutorSerializer(read_only=True)
-    tutor_id = serializers.PrimaryKeyRelatedField(
-        queryset=TutorName.objects.all(), source="tutor", write_only=True
-    )
     course_name = serializers.SerializerMethodField()
 
     class Meta:
