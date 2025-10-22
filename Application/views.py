@@ -9,6 +9,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
+from rest_framework.permissions import IsAdminUser
+
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.decorators import api_view, permission_classes
 from google.oauth2 import id_token
@@ -26,6 +28,7 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from datetime import datetime
+from django.utils import timezone
 
 class GoogleAuthView(APIView):
     def post(self, request):
@@ -190,7 +193,7 @@ class CoursePageDetailsView(APIView):
 class CourseSinglePageView(APIView):
     def get(self, request, format=None):
         course_details = CourseSinglePage.objects.all()
-        serializer = CourseSinglePageSerializer(course_details, many=True)
+        serializer = CourseSinglePageSerializer(course_details, many=True, context={'request': request})
         return Response(serializer.data)
 
 class EnrollFormView(APIView):
@@ -627,20 +630,44 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         if not course_id:
             return Response({"error": "course_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        today = datetime.now().date()
+        today = timezone.localdate()
+        current_time = timezone.localtime().time()
 
         obj, created = StudentAttendance.objects.get_or_create(
             student=profile,
             student_course_id=course_id,
             date=today,
             defaults={
-                "status": "pending", 
-                "marked_by": None,  
-                "attended_at": datetime.now().time(),
+                "status": "pending",
+                "marked_by_student": True,
+                "marked_by": None,
+                "attended_at":current_time,
             },
         )
 
-        serializer = self.get_serializer(obj)
+        # If record exists but wasn't marked by student, update it
+        if not created and not obj.marked_by_student:
+            obj.marked_by_student = True
+            obj.attended_at = current_time
+            obj.save()
+            
+            
+            
+    @action(detail=False, methods=["get"])
+    def marked_self(self, request):
+        course_id = request.query_params.get("course")
+        date = request.query_params.get("date")
+
+        queryset = StudentAttendance.objects.filter(marked_by_student=True)
+
+        if course_id:
+            queryset = queryset.filter(student_course_id=course_id)
+        if date:
+            queryset = queryset.filter(date=date)
+
+        queryset = queryset.select_related("student", "student_course")
+
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -674,3 +701,55 @@ class StudentWorksViewSet(viewsets.ModelViewSet):
             return StudentWorks.objects.filter(student=profile)
         return StudentWorks.objects.none()
     
+    
+class AdminBatchReportView(APIView):
+    permission_classes = [IsAdminUser]  
+
+    def get(self, request):
+        # Get all students grouped by batch & course
+        profiles = Profile.objects.select_related("batch", "course").all()
+        
+        batch_reports = []
+        batches = set(profiles.values_list("batch_id", flat=True))
+        
+        for batch_id in batches:
+            batch_students = [p for p in profiles if p.batch_id == batch_id]
+            if not batch_students:
+                continue
+
+            total_earnings = sum(p.paid_amount or 0 for p in batch_students if p.payment_completed)
+            pending_fees = sum(
+                ((p.course.price if p.course else 0) - (p.paid_amount or 0))
+                for p in batch_students
+                if not p.payment_completed
+            )
+
+
+            batch_reports.append({
+                "batch": batch_students[0].batch,
+                "course": batch_students[0].course,
+                "total_students": len(batch_students),
+                "total_earnings": total_earnings,
+                "pending_fees": pending_fees,
+                "students": batch_students,
+            })
+
+        serializer = AdminBatchReportSerializer(batch_reports, many=True)
+        return Response(serializer.data)
+    
+    
+    
+class UsersListView(APIView):
+    permission_classes = [IsAuthenticated]  # only logged in users can access
+
+    def get(self, request):
+        user = request.user
+        if user.is_superuser:
+            users = User.objects.all()  # superuser sees all
+        elif user.is_staff:
+            users = User.objects.filter(id=user.id)  # staff sees only themselves
+        else:
+            users = User.objects.filter(id=user.id)  # normal user sees only themselves
+
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)

@@ -217,6 +217,7 @@ class Certificate(models.Model):
     grade = models.CharField(max_length=50, null=True, blank=True)
     issued_at = models.DateTimeField(default=timezone.now, editable=False)
 
+
     def __str__(self):
         return f"Certificate {self.certificate_number} - {self.profile.name}"
     
@@ -290,7 +291,8 @@ class StudentAttendance(models.Model):
     student_course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='attendances')
     date = models.DateField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
-    attended_at = models.TimeField(auto_now_add=False, null=True, blank=True)
+    marked_by_student = models.BooleanField(default=False)
+    attended_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="marked_attendance")
 
     class Meta:

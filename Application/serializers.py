@@ -577,6 +577,33 @@ class EnrollFormSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("An enrollment with this email already exists.")
         
         return value.lower()
+    
+    
+class AttendanceSerializer(serializers.ModelSerializer):
+    student = serializers.SlugRelatedField(
+        slug_field="unique_id",
+        queryset=Profile.objects.all()
+    )
+    student_name = serializers.CharField(source="student.name", read_only=True)
+    course_name = serializers.CharField(source="student_course.course.title", read_only=True)
+
+    class Meta:
+        model = StudentAttendance
+        fields = [
+            "id",
+            "student",
+            "student_name",
+            "student_course",
+            "course_name",
+            "date",
+            "status",
+            "attended_at",
+            "marked_by_student",
+            "marked_by",
+        ]
+        read_only_fields = ["marked_by"]
+
+
 
 class ProfileSerializer(serializers.ModelSerializer):
     course_details = CourseSerializer(source="course", read_only=True)
@@ -588,6 +615,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     course_name = serializers.CharField(source="course.get_title_display", read_only=True)
     batch_number = serializers.CharField(source="batch.batch_number", read_only=True)  # display only
     batch = serializers.PrimaryKeyRelatedField(queryset=Batches.objects.all(), allow_null=True) 
+    attendance_list = AttendanceSerializer(source="attendance_records", many=True, read_only=True)
 
     class Meta:
         model = Profile
@@ -645,28 +673,6 @@ class ContactSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class AttendanceSerializer(serializers.ModelSerializer):
-    student = serializers.SlugRelatedField(
-        slug_field="unique_id",
-        queryset=Profile.objects.all()
-    )
-    student_name = serializers.CharField(source="student.name", read_only=True)
-    course_name = serializers.CharField(source="student_course.course.title", read_only=True)
-
-    class Meta:
-        model = StudentAttendance
-        fields = [
-            "id",
-            "student",
-            "student_name",
-            "student_course",
-            "course_name",
-            "date",
-            "status",
-            "attended_at",
-            "marked_by",
-        ]
-        read_only_fields = ["marked_by"]
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -782,3 +788,44 @@ class StudentWorkSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentWorks
         fields = "__all__"
+        
+        
+class AdminBatchReportSerializer(serializers.Serializer):
+    batch_number = serializers.SerializerMethodField()
+    course_name = serializers.SerializerMethodField()
+    
+    total_students = serializers.IntegerField()
+    total_earnings = serializers.DecimalField(max_digits=12, decimal_places=2)
+    pending_fees = serializers.DecimalField(max_digits=12, decimal_places=2)
+    
+    students = serializers.SerializerMethodField()
+    
+    def get_batch_number(self, obj):
+        batch = obj.get("batch")
+        return getattr(batch, "batch_number", "N/A")
+
+    def get_course_name(self, obj):
+        course = obj.get("course")
+        if course:
+            # if you have get_title_display(), call it safely
+            return getattr(course, "get_title_display", lambda: course.title if hasattr(course, "title") else "N/A")()
+        return "N/A"
+
+    def get_students(self, obj):
+        students = obj.get("students", [])
+        return [
+            {
+                "name": s.name,
+                "email": s.email,
+                "paid_amount": s.paid_amount,
+                "payment_completed": s.payment_completed,
+                "course_fee": s.course.price if s.course else None,
+            }
+            for s in students
+        ]
+        
+        
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "is_staff", "is_superuser", "first_name", "last_name"]

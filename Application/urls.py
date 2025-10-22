@@ -16,7 +16,6 @@ router.register(r"student-session", StudentSessionViewSet, basename="student-ses
 router.register(r"works", StudentWorksViewSet, basename="works")
 
 
-
 urlpatterns = [
     
     path("", include(router.urls)),
@@ -77,4 +76,8 @@ urlpatterns = [
     
     path("password-reset-confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
     
+    path("admin/batch-report/", AdminBatchReportView.as_view(), name="admin-batch-report"),
+
+    path("api/users/", UsersListView.as_view(), name="users-list"),
+
 ]
