@@ -159,6 +159,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://exedu-uiux.vercel.app",
     "https://exedu.in",
     "https://server.exedu.in",
+    "http://localhost:8000",
     "http://localhost:8080",
 ]
 

@@ -14,7 +14,8 @@ router.register(r"tutor", TutorViewSet, basename="tutor")
 router.register(r"session", SessionViewSet, basename="session")
 router.register(r"student-session", StudentSessionViewSet, basename="student-session")
 router.register(r"works", StudentWorksViewSet, basename="works")
-
+router.register(r"region", RegionViewSet, basename="region")
+router.register(r"tutor-attendance", TutorAttendanceViewSet, basename="tutor-attendance")
 
 urlpatterns = [
     

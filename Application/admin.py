@@ -46,3 +46,5 @@ admin.site.register(StudentWorks)
 admin.site.register(Batches)
 
 admin.site.register(TutorName)
+
+admin.site.register(StudentRegion)

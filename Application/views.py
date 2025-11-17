@@ -125,6 +125,11 @@ class PasswordResetConfirmView(generics.GenericAPIView):
         return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
 
 
+class RegionViewSet(viewsets.ModelViewSet):
+    queryset = StudentRegion.objects.all()
+    serializer_class = RegionSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
     
     
 class SectionImagesView(APIView):
@@ -256,11 +261,15 @@ class StudentProfileViewset(viewsets.ModelViewSet):
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
 
+
+
 class ProfileListView(APIView):
     def get(self, request, format=None):
         profiles = Profile.objects.all()
         serializer = ProfileSerializer(profiles, many=True)
         return Response(serializer.data)
+
+
 
 class ProfileByUserView(APIView):
     def get(self, request, user_id):
@@ -522,8 +531,6 @@ class NotificationViewSet(viewsets.ModelViewSet):
         return qs
 
 
-
-
         
         
 
@@ -562,16 +569,15 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(date=date) 
 
         return queryset
-
-
-
+    
+    
     @action(detail=False, methods=["post"])
     def bulk(self, request):
-        date = request.data.get("date")
+        date_str = request.data.get("date")
         course_id = request.data.get("course")
         records = request.data.get("records", [])
 
-        if not date or not course_id or not records:
+        if not date_str or not course_id or not records:
             return Response(
                 {"error": "date, course, and records are required"},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -581,11 +587,17 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
         created, errors = [], []
 
+        try:
+            local_now = timezone.localtime(timezone.now())
+            local_date = local_now.date()
+        except Exception:
+            local_date = timezone.now().date()
+
         with transaction.atomic():
             for idx, record in enumerate(records):
                 student_uuid = record.get("student")
                 status_val = record.get("status")
-                attended_at = record.get("attended_at")
+                attended_at = record.get("attended_at")  
 
                 if not student_uuid or not status_val:
                     errors.append({"index": idx, "error": "missing student or status"})
@@ -597,14 +609,26 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     errors.append({"index": idx, "error": f"student not found: {student_uuid}"})
                     continue
 
+                # Handle attended_at
+                if attended_at:
+                    # Parse frontend datetime and localize it
+                    try:
+                        from datetime import datetime
+                        attended_dt = datetime.fromisoformat(attended_at)
+                        attended_dt = timezone.make_aware(attended_dt, timezone.get_default_timezone())
+                    except Exception:
+                        attended_dt = timezone.localtime(timezone.now())
+                else:
+                    attended_dt = timezone.localtime(timezone.now())
+
                 obj, _ = StudentAttendance.objects.update_or_create(
                     student=student_obj,
                     student_course=course,
-                    date=date,
+                    date=local_date,  # use local date, not raw frontend one
                     defaults={
                         "status": status_val,
                         "marked_by": request.user,
-                        "attended_at": attended_at,
+                        "attended_at": attended_dt,
                     },
                 )
                 created.append(obj)
@@ -618,6 +642,62 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK,
         )
+
+
+
+    # @action(detail=False, methods=["post"])
+    # def bulk(self, request):
+    #     date = request.data.get("date")
+    #     course_id = request.data.get("course")
+    #     records = request.data.get("records", [])
+
+    #     if not date or not course_id or not records:
+    #         return Response(
+    #             {"error": "date, course, and records are required"},
+    #             status=status.HTTP_400_BAD_REQUEST,
+    #         )
+
+    #     course = get_object_or_404(Course, id=course_id)
+
+    #     created, errors = [], []
+
+    #     with transaction.atomic():
+    #         for idx, record in enumerate(records):
+    #             student_uuid = record.get("student")
+    #             status_val = record.get("status")
+    #             attended_at = record.get("attended_at")
+
+    #             if not student_uuid or not status_val:
+    #                 errors.append({"index": idx, "error": "missing student or status"})
+    #                 continue
+
+    #             try:
+    #                 student_obj = Profile.objects.get(unique_id=student_uuid)
+    #             except Profile.DoesNotExist:
+    #                 errors.append({"index": idx, "error": f"student not found: {student_uuid}"})
+    #                 continue
+
+    #             obj, _ = StudentAttendance.objects.update_or_create(
+    #                 student=student_obj,
+    #                 student_course=course,
+    #                 date=date,
+    #                 defaults={
+    #                     "status": status_val,
+    #                     "marked_by": request.user,
+    #                     "attended_at": attended_at,
+    #                 },
+    #             )
+    #             created.append(obj)
+
+    #     serializer = self.get_serializer(created, many=True)
+    #     return Response(
+    #         {
+    #             "saved_count": len(created),
+    #             "errors": errors,
+    #             "records": serializer.data,
+    #         },
+    #         status=status.HTTP_200_OK,
+    #     )
         
     @action(detail=False, methods=["post"])
     def mark_self(self, request):
@@ -651,7 +731,15 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             obj.attended_at = current_time
             obj.save()
             
-            
+        return Response(
+            {
+                "message": "Attendance marked successfully",
+                "attendance_id": obj.id,
+                "marked_by_student": obj.marked_by_student,
+                "created": created,
+            },
+            status=status.HTTP_200_OK,
+        )
             
     @action(detail=False, methods=["get"])
     def marked_self(self, request):
@@ -675,6 +763,7 @@ class SessionViewSet(viewsets.ModelViewSet):
     queryset = Session.objects.all()
     serializer_class = SessionSerializer
     permission_classes = [permissions.IsAuthenticated]
+
 
 class StudentSessionViewSet(viewsets.ModelViewSet):
     serializer_class = SessionSerializer
@@ -736,20 +825,54 @@ class AdminBatchReportView(APIView):
 
         serializer = AdminBatchReportSerializer(batch_reports, many=True)
         return Response(serializer.data)
+
+
+class TutorAttendanceViewSet(viewsets.ModelViewSet):
+    serializer_class = TutorAttendanceSerializer
+    queryset = TutorAttendance.objects.all()
+    permission_classes = [IsAuthenticated]
     
+    def get_queryset(self):
+        queryset = TutorAttendance.objects.all()
+        
+        tutor_id = self.request.query_params.get("tutor")
     
+        if tutor_id:
+            queryset = queryset.filter(tutor_id=tutor_id)
+    
+        return queryset
+
+
+    def create(self, request, *args, **kwargs):
+        tutor_id = request.data.get("tutor")
+        session_id = request.data.get("session")
+        date = request.data.get("date")
+        status_value = request.data.get("status")
+
+        if not all([tutor_id, session_id, date, status_value]):
+            return Response({"error": "Missing required fields."}, status=status.HTTP_400_BAD_REQUEST)
+
+        attendance, created = TutorAttendance.objects.update_or_create(
+            tutor_id=tutor_id,
+            session_id=session_id,
+            date=date,
+            defaults={"status": status_value},
+        )
+
+        serializer = self.get_serializer(attendance)
+        return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
     
 class UsersListView(APIView):
-    permission_classes = [IsAuthenticated]  # only logged in users can access
+    permission_classes = [IsAuthenticated]  
 
     def get(self, request):
         user = request.user
         if user.is_superuser:
-            users = User.objects.all()  # superuser sees all
+            users = User.objects.all() 
         elif user.is_staff:
-            users = User.objects.filter(id=user.id)  # staff sees only themselves
+            users = User.objects.filter(id=user.id) 
         else:
-            users = User.objects.filter(id=user.id)  # normal user sees only themselves
+            users = User.objects.filter(id=user.id)  
 
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)

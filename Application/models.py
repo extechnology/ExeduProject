@@ -71,18 +71,34 @@ class CoursePageDetails(models.Model):
         return self.title
     
     
-from django.db import models
+class StudentRegion(models.Model):
+    region = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='regions/',null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    phone = models.CharField(max_length=15, null=True, blank=True)
+
+    def __str__(self):
+        return self.region
+    
 
 
+    
 
 class TutorName(models.Model):
     name = models.CharField(max_length=500)
     email = models.EmailField(null=True, blank=True)
     phone_number = models.CharField(max_length=15, null=True, blank=True)
     image = models.ImageField(upload_to='tutors/', null=True, blank=True)
+    region = models.ForeignKey(
+        StudentRegion,
+        on_delete=models.CASCADE,null=True, blank=True
+    )
 
     def __str__(self):
         return self.name
+    
+    
+
     
     
 class Course(models.Model):
@@ -124,7 +140,9 @@ class Course(models.Model):
     is_active = models.BooleanField(default=True)
     price = models.DecimalField(max_digits=10,decimal_places=2,blank=True,null=True,help_text="Course price in INR (or your currency)")
     created_at = models.DateTimeField(default=timezone.now, editable=False)  
-    updated_at = models.DateTimeField(auto_now=True)      
+    updated_at = models.DateTimeField(auto_now=True)   
+    
+    region = models.ForeignKey(StudentRegion,on_delete=models.CASCADE, null=True, blank=True)   
 
     class Meta:
         ordering = ["title"]
@@ -166,9 +184,13 @@ class Batches(models.Model):
     end_date = models.DateField(auto_now_add=False, null=True, blank=True)
     date = models.DateField(auto_now_add=False, null=True, blank=True)
     batch_number = models.CharField(max_length=255, null=True, blank=True)
+    region = models.ForeignKey(StudentRegion,on_delete=models.CASCADE, null=True, blank=True)   
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     def __str__(self):
         return f"{self.course.title}"
+
+
 
 
 class Profile(models.Model):
@@ -190,6 +212,8 @@ class Profile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
     is_public = models.BooleanField(default=False) 
     can_access_profile = models.BooleanField(default=False)
+    student_fee = models.DecimalField(max_digits=10,decimal_places=2,blank=True,null=True,help_text="Student Course price in INR (or your currency)")
+    student_region = models.ForeignKey(StudentRegion, on_delete=models.SET_NULL, null=True, blank=True)
     
     course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True)
     enrolled_at = models.DateTimeField(auto_now_add=False, null=True, blank=True)
@@ -216,6 +240,8 @@ class Certificate(models.Model):
     certificate_number = models.UUIDField(default=uuid.uuid4,  editable=False)
     grade = models.CharField(max_length=50, null=True, blank=True)
     issued_at = models.DateTimeField(default=timezone.now, editable=False)
+    region = models.ForeignKey(StudentRegion,on_delete=models.CASCADE, null=True, blank=True)   
+    
 
 
     def __str__(self):
@@ -262,6 +288,8 @@ class Session(models.Model):
         blank=True
     )
     created_at = models.DateTimeField(auto_now_add=True , null=True, blank=True)
+    region = models.ForeignKey(StudentRegion,on_delete=models.CASCADE, null=True, blank=True)   
+    
 
     @property
     def end_time(self):
@@ -276,7 +304,24 @@ class Session(models.Model):
         return f"Session with {self.tutor} on {self.start_time.strftime('%Y-%m-%d %H:%M')}"
 
 
+class TutorAttendance(models.Model):
+    STATUS_CHOICES = [
+        ("present", "Present"),
+        ("absent", "Absent"),
+    ]
+    tutor = models.ForeignKey(TutorName, on_delete=models.CASCADE)
+    session = models.ForeignKey(Session, on_delete=models.CASCADE)
+    date = models.DateField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
 
+    class Meta:
+        unique_together = ("tutor", "session", "date")  
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.tutor.name} - {self.session.title} - {self.date} ({self.status})"
+    
+    
 class StudentAttendance(models.Model):
     
     STATUS_CHOICES = [
@@ -294,6 +339,8 @@ class StudentAttendance(models.Model):
     marked_by_student = models.BooleanField(default=False)
     attended_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="marked_attendance")
+    region = models.ForeignKey(StudentRegion,on_delete=models.CASCADE, null=True, blank=True)   
+    
 
     class Meta:
         unique_together = ("student", "student_course", "date") 

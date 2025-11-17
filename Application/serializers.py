@@ -444,6 +444,12 @@ class PasswordResetSerializer(serializers.Serializer):
         email_msg.send()
 
 
+class RegionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentRegion
+        fields = "__all__"  
+        
+
 class PasswordResetConfirmSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=6)
     confirm_password = serializers.CharField(write_only=True)
@@ -480,10 +486,11 @@ class UploadedImagesSerializer(serializers.ModelSerializer):
 class CourseSerializer(serializers.ModelSerializer):
     title_display = serializers.CharField(source="get_title_display", read_only=True)
     tutor_name = serializers.CharField(source="tutor.name", read_only=True)
+    region_name = serializers.CharField(source='region.region', read_only=True)
 
     class Meta:
         model = Course
-        fields = ['id', 'title','sub_title', 'title_display','description',"tutor_name", 'image', 'duration', 'tutor', 'price']
+        fields = ['id', 'title','sub_title', 'title_display','description',"tutor_name", 'image', 'duration', 'tutor', 'price','region','region_name']
 
 
 class SectionImagesSerializer(serializers.ModelSerializer):
@@ -553,26 +560,20 @@ class EnrollFormSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
     def validate_name(self, value):
-        """Custom validation for name field"""
         if len(value.strip()) < 2:
             raise serializers.ValidationError("Name must be at least 2 characters long.")
         return value.strip()
 
     def validate_phone(self, value):
-        """Custom validation for phone field"""
-        # Remove all non-digit characters
         phone_digits = re.sub(r'\D', '', value)
         
-        # Check if it's a valid 10-digit number (assuming Indian format)
         if len(phone_digits) != 10:
             raise serializers.ValidationError("Please enter a valid 10-digit phone number.")
         
         return phone_digits
 
     def validate_email(self, value):
-        """Custom validation for email field"""
-        # Check if email already exists
-        if self.instance is None:  # Only for creation, not updates
+        if self.instance is None:  
             if EnrollForm.objects.filter(email=value.lower()).exists():
                 raise serializers.ValidationError("An enrollment with this email already exists.")
         
@@ -586,6 +587,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
     )
     student_name = serializers.CharField(source="student.name", read_only=True)
     course_name = serializers.CharField(source="student_course.course.title", read_only=True)
+    region_name = serializers.CharField(source='region.region', read_only=True)
 
     class Meta:
         model = StudentAttendance
@@ -600,10 +602,23 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "attended_at",
             "marked_by_student",
             "marked_by",
+            "region",
+            "region_name",
         ]
         read_only_fields = ["marked_by"]
 
 
+class BatchSerializer(serializers.ModelSerializer):
+    course_name = serializers.SerializerMethodField()
+    region_name = serializers.CharField(source='region.region', read_only=True)
+
+    class Meta:
+        model = Batches
+        fields = "__all__"  
+
+    def get_course_name(self, obj):
+        return obj.course.title if obj.course else None
+    
 
 class ProfileSerializer(serializers.ModelSerializer):
     course_details = CourseSerializer(source="course", read_only=True)
@@ -613,9 +628,10 @@ class ProfileSerializer(serializers.ModelSerializer):
         required=False
     )
     course_name = serializers.CharField(source="course.get_title_display", read_only=True)
-    batch_number = serializers.CharField(source="batch.batch_number", read_only=True)  # display only
-    batch = serializers.PrimaryKeyRelatedField(queryset=Batches.objects.all(), allow_null=True) 
+    batch_number = serializers.CharField(source="batch.batch_number", read_only=True)  
+    batch_details = BatchSerializer(source="batch", read_only=True) 
     attendance_list = AttendanceSerializer(source="attendance_records", many=True, read_only=True)
+    region_name = serializers.CharField(source='student_region.region', read_only=True)
 
     class Meta:
         model = Profile
@@ -650,6 +666,8 @@ class CertificateSerializer(serializers.ModelSerializer):
     issueDate = serializers.DateTimeField(source="issued_at", format="%Y-%m-%d", read_only=True)
     certificateNumber = serializers.UUIDField(source="certificate_number", read_only=True)
     certificateFile = serializers.FileField(source="certificate_file", required=True)
+    region_name = serializers.CharField(source='region.region', read_only=True)
+    
 
     class Meta:
         model = Certificate
@@ -664,6 +682,8 @@ class CertificateSerializer(serializers.ModelSerializer):
             "grade",
             "description",
             "certificateFile",
+            "region",
+            "region_name",
         ]
 
 
@@ -689,37 +709,13 @@ class NotificationSerializer(serializers.ModelSerializer):
         
         
 class TutorSerializer(serializers.ModelSerializer):
+    region_name = serializers.CharField(source='region.region', read_only=True)
+    
     class Meta:
         model = TutorName
         fields = "__all__"
 
 
-class BatchSerializer(serializers.ModelSerializer):
-    course_name = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Batches
-        fields = "__all__"  
-
-    def get_course_name(self, obj):
-        return obj.course.title if obj.course else None
-
-
-
-
-# class SessionSerializer(serializers.ModelSerializer):
-#     tutor_details = ProfileSerializer(source="tutor", read_only=True)
-#     student_details = ProfileSerializer(source="students", many=True, read_only=True)
-#     tutor = serializers.PrimaryKeyRelatedField(
-#         queryset=Profile.objects.all(), allow_null=True
-#     )
-#     students = serializers.PrimaryKeyRelatedField(
-#         queryset=Profile.objects.all(), many=True, required=False
-#     )
-
-#     class Meta:
-#         model = Session
-#         fields = "__all__"
 
 
 class SessionSerializer(serializers.ModelSerializer):
@@ -738,6 +734,7 @@ class SessionSerializer(serializers.ModelSerializer):
     student_details = ProfileSerializer(source="students", many=True, read_only=True)
     course_details = CourseSerializer(source="course", read_only=True)
     attendance_details = AttendanceSerializer(source="attendance",  many=True, read_only=True)
+    region_name = serializers.CharField(source='region.region', read_only=True)
 
 
     class Meta:
@@ -754,6 +751,8 @@ class SessionSerializer(serializers.ModelSerializer):
             "students",
             "tutor_details",
             "student_details",
+            "region",
+            "region_name",
         ]
         
     def create(self, validated_data):
@@ -799,6 +798,7 @@ class AdminBatchReportSerializer(serializers.Serializer):
     pending_fees = serializers.DecimalField(max_digits=12, decimal_places=2)
     
     students = serializers.SerializerMethodField()
+    region_name = serializers.CharField(source='region.region', read_only=True)
     
     def get_batch_number(self, obj):
         batch = obj.get("batch")
@@ -823,6 +823,15 @@ class AdminBatchReportSerializer(serializers.Serializer):
             }
             for s in students
         ]
+        
+        
+class TutorAttendanceSerializer(serializers.ModelSerializer):
+    tutor_name = serializers.CharField(source="tutor.name", read_only=True)
+    session_title = serializers.CharField(source="session.title", read_only=True)
+
+    class Meta:
+        model = TutorAttendance
+        fields = ["id", "tutor", "session", "date", "status", "tutor_name", "session_title"]
         
         
 class UserSerializer(serializers.ModelSerializer):
