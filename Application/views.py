@@ -7,7 +7,6 @@ from rest_framework import status,generics
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
-from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework.permissions import IsAdminUser
 
@@ -20,15 +19,13 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import render, get_object_or_404
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.http import HttpResponse
 from rest_framework.decorators import action
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from datetime import datetime
 from django.utils import timezone
+
 
 class GoogleAuthView(APIView):
     def post(self, request):
@@ -553,22 +550,86 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         )
         return obj
 
+    
     def get_queryset(self):
+        qs = StudentAttendance.objects.select_related(
+            "student",
+            "student_course",
+            "session",
+            "region"
+        )
+
         user = self.request.user
-        queryset = StudentAttendance.objects.all().select_related("student", "student_course")
 
         if hasattr(user, "profile") and not user.is_staff:
-            queryset = queryset.filter(student=user.profile)
+            qs = qs.filter(student=user.profile)
 
+        # Filters
         course_id = self.request.query_params.get("course")
         if course_id:
-            queryset = queryset.filter(student_course_id=course_id)
+            qs = qs.filter(student_course_id=course_id)
 
-        date = self.request.query_params.get("date")
-        if date:
-            queryset = queryset.filter(date=date) 
+        session_id = self.request.query_params.get("session")
+        if session_id:
+            qs = qs.filter(session_id=session_id)
 
-        return queryset
+        month = self.request.query_params.get("month")  # YYYY-MM
+        if month:
+            year, month_num = map(int, month.split("-"))
+            start = date(year, month_num, 1)
+            end = date(year, month_num, monthrange(year, month_num)[1])
+            qs = qs.filter(date__range=(start, end))
+
+        date_param = self.request.query_params.get("date")
+        if date_param:
+            qs = qs.filter(date=date_param)
+
+        return qs.order_by("date", "student__name")
+
+
+
+    @action(detail=False, methods=["get"], url_path="report")
+    def report(self, request):
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+
+        if not start_date or not end_date:
+            return Response(
+                {"error": "start_date and end_date are required"},
+                status=400
+            )
+
+        try:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            return Response(
+                {"error": "Invalid date format (YYYY-MM-DD)"},
+                status=400
+            )
+
+        qs = StudentAttendance.objects.select_related(
+            "student",
+            "student_course",
+            "session",
+            "region"
+        ).filter(date__range=(start, end))
+
+        # Optional filters
+        session_id = request.query_params.get("session")
+        if session_id:
+            qs = qs.filter(session_id=session_id)
+
+        course_id = request.query_params.get("course")
+        if course_id:
+            qs = qs.filter(student_course_id=course_id)
+
+        region_id = request.query_params.get("region")
+        if region_id:
+            qs = qs.filter(region_id=region_id)
+
+        serializer = AttendanceSerializer(qs, many=True)
+        return Response(serializer.data)
     
     
     @action(detail=False, methods=["post"])
@@ -576,6 +637,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         date_str = request.data.get("date")
         course_id = request.data.get("course")
         records = request.data.get("records", [])
+        region_id = request.data.get("region")
 
         if not date_str or not course_id or not records:
             return Response(
@@ -583,16 +645,22 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        course = get_object_or_404(Course, id=course_id)
-
-        created, errors = [], []
 
         try:
-            local_now = timezone.localtime(timezone.now())
-            local_date = local_now.date()
-        except Exception:
-            local_date = timezone.now().date()
+            from datetime import datetime
+            attendance_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return Response(
+                {"error": "Invalid date format. Use YYYY-MM-DD"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
+
+        course = get_object_or_404(Course, id=course_id)
+        region = get_object_or_404(StudentRegion, id=region_id) if region_id else None
+        created, errors = [], []
+
+        
         with transaction.atomic():
             for idx, record in enumerate(records):
                 student_uuid = record.get("student")
@@ -624,11 +692,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 obj, _ = StudentAttendance.objects.update_or_create(
                     student=student_obj,
                     student_course=course,
-                    date=local_date,  # use local date, not raw frontend one
+                    region=region,
+                    date=attendance_date,  # ✅ FIXED
                     defaults={
                         "status": status_val,
                         "marked_by": request.user,
-                        "attended_at": attended_dt,
                     },
                 )
                 created.append(obj)
@@ -645,59 +713,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
 
 
-    # @action(detail=False, methods=["post"])
-    # def bulk(self, request):
-    #     date = request.data.get("date")
-    #     course_id = request.data.get("course")
-    #     records = request.data.get("records", [])
-
-    #     if not date or not course_id or not records:
-    #         return Response(
-    #             {"error": "date, course, and records are required"},
-    #             status=status.HTTP_400_BAD_REQUEST,
-    #         )
-
-    #     course = get_object_or_404(Course, id=course_id)
-
-    #     created, errors = [], []
-
-    #     with transaction.atomic():
-    #         for idx, record in enumerate(records):
-    #             student_uuid = record.get("student")
-    #             status_val = record.get("status")
-    #             attended_at = record.get("attended_at")
-
-    #             if not student_uuid or not status_val:
-    #                 errors.append({"index": idx, "error": "missing student or status"})
-    #                 continue
-
-    #             try:
-    #                 student_obj = Profile.objects.get(unique_id=student_uuid)
-    #             except Profile.DoesNotExist:
-    #                 errors.append({"index": idx, "error": f"student not found: {student_uuid}"})
-    #                 continue
-
-    #             obj, _ = StudentAttendance.objects.update_or_create(
-    #                 student=student_obj,
-    #                 student_course=course,
-    #                 date=date,
-    #                 defaults={
-    #                     "status": status_val,
-    #                     "marked_by": request.user,
-    #                     "attended_at": attended_at,
-    #                 },
-    #             )
-    #             created.append(obj)
-
-    #     serializer = self.get_serializer(created, many=True)
-    #     return Response(
-    #         {
-    #             "saved_count": len(created),
-    #             "errors": errors,
-    #             "records": serializer.data,
-    #         },
-    #         status=status.HTTP_200_OK,
-    #     )
         
     @action(detail=False, methods=["post"])
     def mark_self(self, request):

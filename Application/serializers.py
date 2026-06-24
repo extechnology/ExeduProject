@@ -1,23 +1,23 @@
-from rest_framework import serializers
-from .models import *
-from django.contrib.auth.models import User
-from django.core.mail import send_mail
+import re
 import random
-from django.utils.crypto import get_random_string
+import datetime
+from .models import *
+from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
-from datetime import timedelta
+from django.core.mail import send_mail
+from rest_framework import serializers
+from django.contrib.auth.models import User
+from django.utils.timezone import localtime
+from django.core.validators import RegexValidator
+from django.utils.crypto import get_random_string
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
-import datetime
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.core.mail import EmailMultiAlternatives
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
-from django.core.validators import RegexValidator
-import re
-from django.utils.timezone import localtime
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -586,8 +586,9 @@ class AttendanceSerializer(serializers.ModelSerializer):
         queryset=Profile.objects.all()
     )
     student_name = serializers.CharField(source="student.name", read_only=True)
-    course_name = serializers.CharField(source="student_course.course.title", read_only=True)
+    course_name = serializers.CharField(source="student_course.title", read_only=True)
     region_name = serializers.CharField(source='region.region', read_only=True)
+    # session_display = serializers.CharField(source="get_session_display", read_only=True)
 
     class Meta:
         model = StudentAttendance
@@ -598,12 +599,14 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "student_course",
             "course_name",
             "date",
+            "session",
             "status",
             "attended_at",
             "marked_by_student",
             "marked_by",
             "region",
             "region_name",
+            # "session_display",
         ]
         read_only_fields = ["marked_by"]
 
@@ -828,10 +831,12 @@ class AdminBatchReportSerializer(serializers.Serializer):
 class TutorAttendanceSerializer(serializers.ModelSerializer):
     tutor_name = serializers.CharField(source="tutor.name", read_only=True)
     session_title = serializers.CharField(source="session.title", read_only=True)
+    duration = serializers.CharField(source="session.duration", read_only=True)
+    start_time = serializers.CharField(source="session.start_time", read_only=True)
 
     class Meta:
         model = TutorAttendance
-        fields = ["id", "tutor", "session", "date", "status", "tutor_name", "session_title"]
+        fields = ["id", "tutor", "session", "date", "status", "tutor_name", "session_title", "duration", "start_time"]
         
         
 class UserSerializer(serializers.ModelSerializer):

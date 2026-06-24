@@ -343,7 +343,13 @@ class StudentAttendance(models.Model):
     
 
     class Meta:
-        unique_together = ("student", "student_course", "date") 
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "student_course", "date", "region"],
+                name="unique_attendance_per_region_date"
+            )
+        ]
+
 
     def __str__(self):
         return f"{self.student} - {self.student_course} - {self.date} ({self.status})"
